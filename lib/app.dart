@@ -45,8 +45,8 @@ class Shell extends StatelessWidget {
     final role = app.role;
     var v = app.view;
     if ((v == Screen.cant || v == Screen.me) && me == null) v = Screen.home;
-    if ([Screen.songs, Screen.editsongs, Screen.sunday, Screen.swap, Screen.markdone, Screen.addSlot].contains(v) && app.sel == null) v = Screen.home;
-    if ([Screen.team, Screen.editmember, Screen.importNames, Screen.teamSetup, Screen.addSlot].contains(v) && role != Role.admin) v = Screen.home;
+    if ([Screen.songs, Screen.editsongs, Screen.sunday, Screen.swap, Screen.markdone].contains(v) && app.sel == null) v = Screen.home;
+    if ([Screen.team, Screen.editmember, Screen.importNames, Screen.teamSetup].contains(v) && role != Role.admin) v = Screen.home;
     if (v == Screen.swap && app.swapTarget == null) v = Screen.home;
     if (v == Screen.cant && findMine(app.upcoming, me?.id) == null) v = Screen.home;
     return switch (v) {
@@ -64,7 +64,6 @@ class Shell extends StatelessWidget {
       Screen.editmember => EditMemberScreen(key: ValueKey('member-${app.editUserId ?? 'new'}'), app: app),
       Screen.importNames => ImportScreen(app: app),
       Screen.teamSetup => TeamSetupScreen(app: app),
-      Screen.addSlot => AddSlotScreen(key: ValueKey('add-${app.selId}'), app: app),
     };
   }
 
@@ -151,6 +150,32 @@ class Shell extends StatelessWidget {
           sub: "Removes ${plural(n, 'Sunday')}, their teams and songs. This can't be undone.",
           onClose: app.closeSheet,
           actions: Btn('Delete ${months[parseMonthKey(k).m]}', icon: 'trash', kind: BtnKind.red, onTap: () => app.deleteMonth(k)),
+        );
+      case 'install':
+        Widget step(int n, String t) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Row(children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(color: C.lav, borderRadius: BorderRadius.circular(14)),
+                  child: Center(child: Text('$n', style: tx(14, w800, C.navy))),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Text(t, style: tx(16, w600))),
+              ]),
+            );
+        return SheetView(
+          title: 'Add to Home Screen first',
+          sub: 'iPhone only sends reminders to apps on your Home Screen.',
+          onClose: app.closeSheet,
+          actions: Btn('Got it', onTap: app.closeSheet),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            step(1, 'In Safari, tap the Share button (square with an arrow).'),
+            step(2, 'Tap "Add to Home Screen", then "Add".'),
+            step(3, 'Open Worship Team from your Home Screen.'),
+            step(4, 'Sign in and tap "Turn on reminders".'),
+          ]),
         );
       case 'resetAdmin':
         return SheetView(

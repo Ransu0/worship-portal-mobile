@@ -63,6 +63,19 @@ class Repo {
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       });
 
+  // ---------- web push subscriptions ----------
+  Future<void> savePushSubscription(String json, String userId, String platform) {
+    final sub = jsonDecode(json) as Map<String, dynamic>;
+    return db.from('push_subscriptions').upsert({
+      'endpoint': sub['endpoint'],
+      'user_id': userId,
+      'subscription': sub,
+      'platform': platform,
+    });
+  }
+
+  Future<void> deletePushSubscription(String endpoint) => db.from('push_subscriptions').delete().eq('endpoint', endpoint);
+
   // ---------- write ----------
   Future<void> saveUser(AppUser u) => db.from(tUsers).upsert(u.toRow());
   Future<void> deleteUser(String id) => db.from(tUsers).delete().eq('id', id);

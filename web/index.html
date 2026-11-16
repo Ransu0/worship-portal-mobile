@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="COG Worship Team: this Sunday's team, songs, schedule and points.">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Installable on iPhone (Share → Add to Home Screen) and Android -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Worship Team">
+  <meta name="theme-color" content="#2B2D80">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+  <title>Worship Team</title>
+
+  <style>
+    html, body { margin: 0; height: 100%; background: #F6F5F1; }
+    #splash { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #F6F5F1; transition: opacity .3s; }
+    #splash img { width: 96px; height: 96px; border-radius: 24px; box-shadow: 0 8px 24px rgba(25,26,46,.12); }
+  </style>
+</head>
+<body>
+  <div id="splash"><img src="icons/Icon-192.png" alt=""></div>
+
+  <script>
+    // Web Push helpers used by the Dart code (lib/webpush/webpush_web.dart).
+    (function () {
+      function urlB64ToUint8(s) {
+        const pad = '='.repeat((4 - (s.length % 4)) % 4);
+        const raw = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
+        const out = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+        return out;
+      }
+      window.wtPush = {
+        supported: function () {
+          return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+        },
+        standalone: function () {
+          return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        },
+        isIOS: function () {
+          return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        },
+        permission: function () {
+          return ('Notification' in window) ? Notification.permission : 'unsupported';
+        },
+        // Must be called straight from a tap. Returns the subscription as JSON, or '' if not allowed.
+        subscribe: async function (vapidKey) {
+          try {
+            const perm = await Notification.requestPermission(); // first, while the tap still counts
+            if (perm !== 'granted') return '';
+            const reg = await navigator.serviceWorker.register('push-sw.js');
+            await navigator.serviceWorker.ready;
+            let sub = await reg.pushManager.getSubscription();
+            if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(vapidKey) });
+            return JSON.stringify(sub.toJSON());
+          } catch (e) {
+            console.error('Push subscribe failed', e);
+            return '';
+          }
+        },
+        // Returns the endpoint that was removed, or ''.
+        unsubscribe: async function () {
+          try {
+            const reg = await navigator.serviceWorker.getRegistration();
+            const sub = reg && await reg.pushManager.getSubscription();
+            if (sub) { const ep = sub.endpoint; await sub.unsubscribe(); return ep; }
+          } catch (e) { console.error(e); }
+          return '';
+        },
+        clearQuery: function () {
+          if (location.search) history.replaceState(null, '', location.pathname + location.hash);
+        },
+        hideSplash: function () {
+          const s = document.getElementById('splash');
+          if (s) { s.style.opacity = '0'; setTimeout(function () { s.remove(); }, 300); }
+        },
+      };
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () { navigator.serviceWorker.register('push-sw.js').catch(function () {}); });
+      }
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

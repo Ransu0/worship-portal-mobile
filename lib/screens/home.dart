@@ -46,12 +46,14 @@ class Welcome extends StatelessWidget {
 
   Widget _member() => WelcomeCard(
         title: 'Welcome, ${firstName(app.me)}',
-        text: "Every Sunday afternoon you'll get a reminder for the next Sunday. Reply by Wednesday afternoon.",
+        text: app.needsInstallForReminders
+            ? "To get reminders on iPhone, add this app to your Home Screen first, then turn them on."
+            : "You'll get a reminder on Sunday afternoon for the next Sunday, and one each day until you reply. Reply by Wednesday 3 PM.",
         onClose: app.dismissWelcome,
         action: app.remindersOn
             ? const StateBox(StateKind.ok, 'Reminders are on',
                 fontSize: 15, padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12), lead: Ic('check', s: 20, c: C.green, w: 2.6))
-            : Btn('Turn on reminders', icon: 'bell', iconSize: 18, md: true, onTap: app.enableReminders),
+            : Btn(app.needsInstallForReminders ? 'How to add to Home Screen' : 'Turn on reminders', icon: 'bell', iconSize: 18, md: true, onTap: app.enableReminders),
       );
 }
 
@@ -207,7 +209,13 @@ class AdminHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ok = s.assignments.where((a) => statusOf(a) == StatusKind.ok).length;
-    final pending = s.assignments.where((a) => statusOf(a) != StatusKind.ok).toList();
+    // Who needs attention first: swap requests, not yet, absent, then confirmed.
+    int rank(Assignment a) {
+      final st = statusOf(a);
+      if (st == StatusKind.wait) return coveringFor(a) != null ? 0 : 1;
+      return st == StatusKind.absent ? 2 : 3;
+    }
+    final ordered = List.of(s.assignments)..sort((a, b) => rank(a).compareTo(rank(b)));
     final total = s.assignments.length;
     final pct = total == 0 ? 0.0 : ok / total;
     return Frame(
@@ -244,23 +252,44 @@ class AdminHome extends StatelessWidget {
           ]),
         ),
         CardBox(list: true, children: [
-          Padding(padding: const EdgeInsets.only(top: 14, bottom: 6), child: Text('Not confirmed yet', style: tx(18, w800))),
-          if (pending.isEmpty)
-            const EmptyText('Everyone has confirmed.')
-          else
-            for (var i = 0; i < pending.length; i++)
-              LRow(minHeight: 68, first: i == 0, children: [
+          Padding(padding: const EdgeInsets.only(top: 14, bottom: 6), child: Text('Team status', style: tx(18, w800))),
+          for (var i = 0; i < ordered.length; i++)
+            InkWell(
+              onTap: () => app.go(Screen.swap, sel: s.id, swap: ordered[i]),
+              child: LRow(minHeight: 64, first: i == 0, children: [
                 Grow(
-                  title: pending[i].userName,
-                  sub: '${roleLabel[pending[i].role]}${statusOf(pending[i]) == StatusKind.absent ? ' · absent' : ''}',
+                  title: ordered[i].userName,
+                  sub: coveringFor(ordered[i]) == null ? roleLabel[ordered[i].role] : '${roleLabel[ordered[i].role]} · covering for ${coveringFor(ordered[i])}',
                 ),
-                MiniBtn('Swap', onTap: () => app.go(Screen.swap, sel: s.id, swap: pending[i])),
+                StatusPill(a: ordered[i]),
               ]),
+            ),
         ]),
         Btn('Open Sunday, ${dLbl(s.date)}', trailingIcon: 'chev', onTap: () => app.go(Screen.sunday, sel: s.id)),
-        Btn('Send test reminder to this phone', icon: 'bell', iconSize: 18, kind: BtnKind.soft, md: true, onTap: app.sendTestReminder),
         if (app.offline) const OfflineNote(),
       ],
+    );
+  }
+}
+
+/// Confirmed / Swap request / Not yet / Absent.
+class StatusPill extends StatelessWidget {
+  final Assignment a;
+  const StatusPill({super.key, required this.a});
+  @override
+  Widget build(BuildContext context) {
+    final st = statusOf(a);
+    final swap = st == StatusKind.wait && coveringFor(a) != null;
+    final (String label, Color bg, Color fg) = switch (st) {
+      StatusKind.ok => ('Confirmed', C.okBg, C.okFg),
+      StatusKind.absent => ('Absent', C.badBg, C.red),
+      StatusKind.wait => swap ? ('Swap request', C.lav, C.navy) : ('Not yet', C.waitBg, C.waitFg),
+    };
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      child: Text(label, style: tx(13, w800, fg)),
     );
   }
 }

@@ -13,8 +13,9 @@ import 'models.dart';
 import 'notify.dart';
 import 'repo.dart';
 import 'shuffle.dart';
+import 'webpush/webpush.dart';
 
-enum Screen { home, schedule, points, me, team, teamSetup, addSlot, cant, songs, editsongs, sunday, swap, markdone, editmember, importNames }
+enum Screen { home, schedule, points, me, team, teamSetup, cant, songs, editsongs, sunday, swap, markdone, editmember, importNames }
 
 enum NavTab { home, schedule, points, me, team }
 
@@ -103,7 +104,13 @@ class AppCtl extends ChangeNotifier {
     logs = cache.logs;
     final meId = prefs.getString(_kMe);
     me = meId == null ? null : firstOr(users, (u) => u.id == meId);
-    remindersOn = me != null && prefs.getString('rem_${me!.id}') == '1';
+    remindersOn = me != null && prefs.getString('rem_${me!.id}') == '1' && (!kIsWeb || WebPush.permission == 'granted');
+    // Opened from a web reminder: ?reply=open|yes|no&s=<scheduleId>
+    final webReply = kIsWeb ? Uri.base.queryParameters : const <String, String>{};
+    if (kIsWeb) {
+      WebPush.clearQuery();
+      WebPush.hideSplash();
+    }
     if (upcoming != null) monthKey = upcoming!.month;
     loaded = users.isNotEmpty;
     notifyListeners();
@@ -113,6 +120,7 @@ class AppCtl extends ChangeNotifier {
     loaded = true;
     notifyListeners();
     repo.listen(_onRemote);
+    if (webReply['reply'] != null && webReply['s'] != null) handleReply(webReply['reply']!, webReply['s']!);
     final launch = Notify.launchResponse;
     if (launch != null && launch.payload != null) {
       Notify.launchResponse = null;
@@ -403,6 +411,11 @@ class AppCtl extends ChangeNotifier {
   }
 
   void signOut() {
+    if (kIsWeb && remindersOn) {
+      WebPush.unsubscribe().then((ep) {
+        if (ep != null) repo.deletePushSubscription(ep).catchError((_) {});
+      });
+    }
     me = null;
     remindersOn = false;
     _savePref(_kMe, null);
@@ -713,19 +726,6 @@ class AppCtl extends ChangeNotifier {
     }
   }
 
-  /// Adds one more person to a Sunday (e.g. a second guitar).
-  Future<void> addToSunday(Schedule s, String userId, Cap role) async {
-    final u = firstOr(users, (x) => x.id == userId);
-    if (u == null) return;
-    back();
-    await _mutSchedule(s.id, (x) {
-      if (x.assignments.any((a) => a.userId == userId)) return;
-      x.assignments.add(Assignment(userId: u.id, userName: u.fullName, role: role, instrument: instrumentFor(role), status: 'assigned'));
-    });
-    toast('${u.fullName} added as ${roleLabel[role]}');
-    _syncReminders();
-  }
-
   /// Removes a spot from a Sunday entirely (not an absence).
   Future<void> removeFromSunday(Schedule s, Assignment a) async {
     if (a.role == Cap.songleader) return;
@@ -738,9 +738,14 @@ class AppCtl extends ChangeNotifier {
   }
 
   // ---------------- reminders ----------------
+  /// iPhone needs the app on the Home Screen before it may show notifications.
+  bool get needsInstallForReminders => kIsWeb && WebPush.isIOS && !WebPush.standalone;
+  bool get remindersSupported => !kIsWeb || WebPush.supported;
+
   Future<void> enableReminders() async {
     final m = me;
     if (m == null) return;
+    if (kIsWeb) return _enableWebReminders(m);
     final ok = await Notify.requestPermission();
     if (!ok) {
       toast('Notifications are blocked in your phone settings');
@@ -750,12 +755,46 @@ class AppCtl extends ChangeNotifier {
     await _savePref('rem_${m.id}', '1');
     notifyListeners();
     await Notify.scheduleFor(m, schedules);
-    toast('Reminders on: every Sunday afternoon');
+    toast('Reminders on: Sunday afternoon until you reply');
+  }
+
+  Future<void> _enableWebReminders(AppUser m) async {
+    if (needsInstallForReminders) {
+      openSheet('install');
+      return;
+    }
+    if (!WebPush.supported) {
+      toast("This browser can't show reminders");
+      return;
+    }
+    final sub = await WebPush.subscribe(webPushPublicKey); // first await: must stay inside the tap
+    if (sub == null) {
+      toast('Notifications are blocked in your settings');
+      return;
+    }
+    try {
+      await repo.savePushSubscription(sub, m.id, WebPush.isIOS ? 'ios-web' : 'web');
+    } catch (_) {
+      toast("Couldn't turn on reminders. Check your internet.");
+      return;
+    }
+    remindersOn = true;
+    await _savePref('rem_${m.id}', '1');
+    notifyListeners();
+    toast('Reminders on: Sunday afternoon until you reply');
   }
 
   Future<void> disableReminders() async {
     final m = me;
     if (m == null) return;
+    if (kIsWeb) {
+      final ep = await WebPush.unsubscribe();
+      if (ep != null) {
+        try {
+          await repo.deletePushSubscription(ep);
+        } catch (_) {}
+      }
+    }
     remindersOn = false;
     await _savePref('rem_${m.id}', null);
     await Notify.cancelAll();

@@ -10,3 +10,6 @@ const defaultPassword = 'cogvet';
 // Set by the build (GitHub Actions passes --dart-define). Local runs show "dev".
 const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
 const appBuild = String.fromEnvironment('APP_BUILD', defaultValue: 'dev');
+
+// Public key for Web Push (iPhone / browser reminders). The private key stays on the server.
+const webPushPublicKey = 'BLdwqq_52TKnyArv2Mn-2jri0x8_jZVVlFCeb2xViZZZ6OenajEZDuYuyJ7RzExF1uxxAF8M4Z-LeKPW8t0NbQA';

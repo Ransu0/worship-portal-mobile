@@ -252,7 +252,7 @@ class MeScreen extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('Reminders', style: tx(16, w700)),
-                Text('Sunday afternoon · reply by Wednesday', style: tx(14, w600, C.soft)),
+                Text(app.needsInstallForReminders ? 'Add the app to your Home Screen first' : 'Sunday afternoon until you reply', style: tx(14, w600, C.soft)),
               ]),
             ),
           ]),

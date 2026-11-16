@@ -14,6 +14,32 @@ The COG Worship Team app for phones: Sunday team, songs, schedule, points, and w
 
 This section updates itself every time a new version is released. The download link above always gives the newest version.
 
+## iPhone (web app)
+
+iPhone members use the same app in Safari, installed to the Home Screen. It's free and has no time limit.
+
+1. Open the web app link in **Safari**.
+2. Tap **Share** → **Add to Home Screen** → **Add**.
+3. Open **Worship Team** from the Home Screen, sign in, and tap **Turn on reminders**. Needs iOS 16.4 or newer.
+
+The web app is built and deployed by GitHub Actions (job `web`) when the repo has a `VERCEL_TOKEN` secret.
+Without it, the build is still saved under **Artifacts** as `worship-team-web`.
+
+## Reminders
+
+| Day | Who gets it |
+|---|---|
+| Sun 3:00 PM | Everyone on next Sunday's team who hasn't replied |
+| Mon 3:00 PM | Only people who still haven't replied ("2 days left") |
+| Tue 3:00 PM | Only people who still haven't replied ("1 day left") |
+| Wed 9:00 AM | Only people who still haven't replied ("ends today at 3:00 PM") |
+
+Replying, or being covered by someone, stops the rest. Nothing is sent after Wednesday 3:00 PM.
+
+- **Android app:** the phone plans these itself (local notifications) with **Yes** / **Can't serve** buttons.
+- **iPhone / browser:** sent by the Supabase function `supabase/functions/daily-reminders`. A job inside Supabase calls it every hour, and it only sends what's due, never twice. Tapping the notification opens the "Can you serve?" card.
+- `.github/workflows/keepalive.yml` calls the function twice a day so the free Supabase project never pauses.
+
 ## Versions
 
 The version number is in `pubspec.yaml`, e.g. `version: 1.0.0+1`. Only the part before `+` matters; GitHub adds the build number.
@@ -68,17 +94,14 @@ flutter run
 
 New members sign in with the default password `cogvet`. The admin adds members from the Team tab.
 
-## Reminders
-
-Members turn them on from Home or the Me tab. The phone reminds them the Sunday before each Sunday they serve, at about 3:00 PM, with **Yes** and **Can't serve** buttons. Replies close Wednesday at 3:00 PM.
-On Realme, Oppo or Xiaomi phones: Settings → Battery → Worship Team → allow background activity, or reminders can be late.
-
 ## Where things are
 
 - `lib/config.dart`: Supabase URL and key, app version
 - `lib/app_ctl.dart`: app state and every action (confirm, swap, points, shuffle…)
 - `lib/shuffle.dart`: the monthly rotation rules and team size per role
-- `lib/notify.dart`: weekly reminders
+- `lib/notify.dart`: Android reminders
+- `lib/webpush/`, `web/push-sw.js`: iPhone / browser reminders
+- `supabase/functions/daily-reminders/`: the reminder sender (already deployed)
 - `lib/screens/`: the screens
 - `lib/ui/`: colours, icons, animations and shared widgets
 

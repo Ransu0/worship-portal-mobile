@@ -2,6 +2,7 @@
 // Each member's phone schedules its own reminder for every Sunday they're on:
 // sent the Sunday before at 3:00 PM, with Yes / Can't serve buttons.
 // Uses flutter_local_notifications 19.x (positional API).
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
@@ -22,6 +23,7 @@ class Notify {
   static bool _ready = false;
 
   static Future<void> init() async {
+    if (kIsWeb) return; // the web app uses Web Push instead (see lib/webpush)
     try {
       tzdata.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation('Asia/Manila'));
@@ -70,12 +72,16 @@ class Notify {
         ),
       );
 
-  static int _idFor(String date) => int.tryParse(date.replaceAll('-', '')) ?? date.hashCode & 0x7fffffff;
+  // e.g. 2026-11-22 → 61122 (fits in a 32-bit id even after ×10).
+  static int _idFor(String date) => int.tryParse(date.replaceAll('-', '').substring(3)) ?? (date.hashCode & 0xffffff);
 
   static String _title(Schedule s, Assignment a) => 'Sun, ${dLbl(s.date)} · ${roleLabel[a.role]}';
   static String _askBody(Schedule s) => '${s.worshipTime} · Can you serve?\nReply by ${replyByLabel(s.date)}';
 
   /// Re-plans every reminder for this member. Safe to call often.
+  /// For each Sunday they still need to answer:
+  ///   Sun 3 PM first ask · Mon 3 PM "2 days left" · Tue 3 PM "1 day left" · Wed 9 AM "ends today 3 PM".
+  /// Replying (or being covered) cancels the rest, because this is re-run on every change.
   static Future<void> scheduleFor(AppUser me, List<Schedule> schedules) async {
     if (!_ready) return;
     await _plugin.cancelAll();
@@ -84,20 +90,30 @@ class Notify {
       if (s.isCompleted || s.date.compareTo(todayStr()) < 0) continue;
       final mine = findMine(s, me.id);
       if (mine == null || mine.covered || statusOf(mine.a) != StatusKind.wait) continue;
-      final w = replyWindow(s.date);
-      if (!w.sendAt.isAfter(now)) continue; // window already open: the in-app card asks instead
-      try {
-        await _plugin.zonedSchedule(
-          _idFor(s.date),
-          _title(s, mine.a),
-          _askBody(s),
-          tz.TZDateTime.from(w.sendAt, tz.local),
-          _details(_askBody(s)),
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          payload: s.id,
-        );
-      } catch (e) {
-        debugPrint('Could not schedule reminder for ${s.date}: $e');
+      final sun = parseDay(s.date);
+      final by = replyByLabel(s.date);
+      final plan = <(DateTime, String)>[
+        (DateTime(sun.year, sun.month, sun.day - 7, 15), '${s.worshipTime} · Can you serve?\nReply by $by'),
+        (DateTime(sun.year, sun.month, sun.day - 6, 15), '2 days left to reply · Can you serve?\nReply by $by'),
+        (DateTime(sun.year, sun.month, sun.day - 5, 15), '1 day left to reply · Can you serve?\nReply by $by'),
+        (DateTime(sun.year, sun.month, sun.day - 4, 9), 'Reply ends today at 3:00 PM · Can you serve?'),
+      ];
+      for (var k = 0; k < plan.length; k++) {
+        final (at, body) = plan[k];
+        if (!at.isAfter(now)) continue;
+        try {
+          await _plugin.zonedSchedule(
+            _idFor(s.date) * 10 + k,
+            _title(s, mine.a),
+            body,
+            tz.TZDateTime.from(at, tz.local),
+            _details(body),
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+            payload: s.id,
+          );
+        } catch (e) {
+          debugPrint('Could not schedule reminder for ${s.date}: $e');
+        }
       }
     }
   }

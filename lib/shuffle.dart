@@ -11,17 +11,6 @@ import 'models.dart';
 
 final _rnd = Random();
 
-List<T> _shuffled<T>(List<T> xs) {
-  final c = List<T>.of(xs);
-  for (var i = c.length - 1; i > 0; i--) {
-    final j = _rnd.nextInt(i + 1);
-    final t = c[i];
-    c[i] = c[j];
-    c[j] = t;
-  }
-  return c;
-}
-
 List<String> sundaysInMonth(int y, int m0) {
   final out = <String>[];
   var d = DateTime(y, m0 + 1, 1);
@@ -35,27 +24,6 @@ List<String> sundaysInMonth(int y, int m0) {
 String saturdayBefore(String sunday) {
   final s = parseDay(sunday);
   return dayStr(DateTime(s.year, s.month, s.day - 1));
-}
-
-class _Pool {
-  final List<AppUser> all;
-  List<AppUser> q;
-  int i = 0;
-  _Pool(this.all) : q = _shuffled(all);
-
-  /// Next person from the rotation who isn't already on this Sunday, or null.
-  AppUser? take(Set<String> used) {
-    if (all.every((u) => used.contains(u.id))) return null;
-    for (var tries = 0; tries <= all.length * 2; tries++) {
-      if (i >= q.length) {
-        q = _shuffled(all);
-        i = 0;
-      }
-      final u = q[i++];
-      if (!used.contains(u.id)) return u;
-    }
-    return null;
-  }
 }
 
 /// How many people each role gets per Sunday. -1 means "everyone with that ministry".
@@ -82,6 +50,18 @@ const _instrument = <Cap, String>{
 
 String instrumentFor(Cap c) => c == Cap.songleader ? 'Lead Vocals' : (_instrument[c] ?? c.name);
 
+/// Fair monthly rotation.
+///
+/// - Every Sunday: 1 song leader + the team size per role from [counts].
+/// - Nobody gets two roles on the same Sunday. Members with two ministries
+///   (e.g. Backup + Media) can be used for either one, one at a time.
+/// - Names don't repeat in the same month while someone else is still free for
+///   that role; when a role has fewer people than Sundays, it takes turns evenly.
+/// - Rarer roles are filled first (e.g. Media before Backup), so a member who is
+///   the only option for a role isn't used up somewhere else.
+/// - Song leaders take turns; whoever led last month goes last.
+/// - Roles set to "Everyone" (Tambourine by default) list all their members every Sunday.
+///
 /// Throws a [StateError] with a readable message when there is no song leader.
 List<Schedule> generateMonthSchedule(int y, int m0, List<AppUser> users, List<Schedule> existing,
     [Map<Cap, int> counts = defaultTeamCounts]) {
@@ -95,16 +75,56 @@ List<Schedule> generateMonthSchedule(int y, int m0, List<AppUser> users, List<Sc
     throw StateError('Add active members with the Song leader ministry first.');
   }
 
-  final prevKey = monthKeyOf(DateTime(y, m0, 1)); // previous month
-  final recent = existing.where((s) => s.month == prevKey).map((s) => s.songleaderId).toSet();
-  final fresh = songleaders.where((u) => !recent.contains(u.id)).toList();
-  final fallback = songleaders.where((u) => recent.contains(u.id)).toList();
-  var slQueue = [..._shuffled(fresh), ..._shuffled(fallback)];
-  var slIdx = 0;
+  // How often each person already serves this month (Sundays kept from before count too),
+  // and last month (used to break ties, so the same people don't always go first).
+  final prevKey = monthKeyOf(DateTime(y, m0, 1));
+  final monthCount = <String, int>{};
+  final lastMonth = <String, int>{};
+  final ledLastMonth = <String>{};
+  bool isEveryone(Cap c) => (counts[c] ?? defaultTeamCounts[c] ?? 0) < 0;
+  for (final s in existing) {
+    if (s.month == monthKey) {
+      for (final a in s.assignments) {
+        if (!isEveryone(a.role)) monthCount[a.userId] = (monthCount[a.userId] ?? 0) + 1;
+      }
+    } else if (s.month == prevKey) {
+      ledLastMonth.add(s.songleaderId);
+      for (final a in s.assignments) {
+        if (!isEveryone(a.role)) lastMonth[a.userId] = (lastMonth[a.userId] ?? 0) + 1;
+      }
+    }
+  }
 
-  // Fill order matches the web app: backup, keys, guitar, bass, drums, media, then tambourine.
-  const order = [Cap.backup, Cap.keys, Cap.guitar, Cap.bass, Cap.drums, Cap.media, Cap.tambourines];
-  final pools = {for (final c in order) c: _Pool(withCap(c))};
+  /// Least-used first; then whoever served less last month; then random.
+  AppUser? pick(List<AppUser> pool, Set<String> used, {bool songleader = false}) {
+    final free = pool.where((u) => !used.contains(u.id)).toList();
+    if (free.isEmpty) return null;
+    final jitter = {for (final u in free) u.id: _rnd.nextDouble()};
+    free.sort((a, b) {
+      final c = (monthCount[a.id] ?? 0).compareTo(monthCount[b.id] ?? 0);
+      if (c != 0) return c;
+      if (songleader) {
+        final l = (ledLastMonth.contains(a.id) ? 1 : 0).compareTo(ledLastMonth.contains(b.id) ? 1 : 0);
+        if (l != 0) return l;
+      }
+      final m = (lastMonth[a.id] ?? 0).compareTo(lastMonth[b.id] ?? 0);
+      if (m != 0) return m;
+      return jitter[a.id]!.compareTo(jitter[b.id]!);
+    });
+    return free.first;
+  }
+
+  // Fill order: rarest roles first (fewest people per spot needed).
+  const roles = [Cap.media, Cap.keys, Cap.drums, Cap.bass, Cap.guitar, Cap.backup, Cap.tambourines];
+  final fixed = roles.where((c) => !isEveryone(c) && (counts[c] ?? defaultTeamCounts[c] ?? 0) > 0).toList()
+    ..sort((a, b) {
+      final ra = withCap(a).length / (counts[a] ?? 1);
+      final rb = withCap(b).length / (counts[b] ?? 1);
+      return ra.compareTo(rb);
+    });
+  final everyone = roles.where(isEveryone).toList();
+  // Shown in this order on the schedule (same as the web app).
+  const display = [Cap.songleader, Cap.backup, Cap.keys, Cap.guitar, Cap.bass, Cap.drums, Cap.media, Cap.tambourines];
 
   final out = <Schedule>[];
   for (final date in sundays) {
@@ -113,37 +133,33 @@ List<Schedule> generateMonthSchedule(int y, int m0, List<AppUser> users, List<Sc
       out.add(already.first);
       continue;
     }
-    if (slIdx >= slQueue.length) {
-      slQueue = _shuffled(songleaders);
-      slIdx = 0;
+    final used = <String>{};
+    final picked = <Assignment>[];
+    void add(AppUser u, Cap role) {
+      used.add(u.id);
+      if (!isEveryone(role)) monthCount[u.id] = (monthCount[u.id] ?? 0) + 1;
+      picked.add(Assignment(userId: u.id, userName: u.fullName, role: role, instrument: instrumentFor(role), status: 'assigned'));
     }
-    final sl = slQueue[slIdx++];
-    final assignments = <Assignment>[
-      Assignment(userId: sl.id, userName: sl.fullName, role: Cap.songleader, instrument: 'Lead Vocals', status: 'assigned'),
-    ];
-    final used = <String>{sl.id};
 
-    for (final role in order) {
+    final sl = pick(songleaders, used, songleader: true)!;
+    add(sl, Cap.songleader);
+
+    for (final role in fixed) {
       final want = counts[role] ?? defaultTeamCounts[role] ?? 0;
-      final pool = pools[role]!;
-      if (want < 0) {
-        // everyone with this ministry (default for tambourine)
-        for (final u in pool.all) {
-          if (used.contains(u.id) && role != Cap.tambourines) continue;
-          assignments.add(Assignment(userId: u.id, userName: u.fullName, role: role, instrument: instrumentFor(role), status: 'assigned'));
-          used.add(u.id);
-        }
-        continue;
+      for (var k = 0; k < want; k++) {
+        final u = pick(withCap(role), used);
+        if (u == null) break;
+        add(u, role);
       }
-      final free = pool.all.where((u) => !used.contains(u.id)).length;
-      for (var k = 0; k < min(want, free); k++) {
-        final u = pool.take(used);
-        if (u == null) continue;
-        used.add(u.id);
-        assignments.add(Assignment(userId: u.id, userName: u.fullName, role: role, instrument: instrumentFor(role), status: 'assigned'));
+    }
+    for (final role in everyone) {
+      for (final u in withCap(role)) {
+        if (used.contains(u.id)) continue; // already serving in another role this Sunday
+        add(u, role);
       }
     }
 
+    picked.sort((a, b) => display.indexOf(a.role).compareTo(display.indexOf(b.role)));
     out.add(Schedule(
       id: 'sched-$date',
       date: date,
@@ -152,7 +168,7 @@ List<Schedule> generateMonthSchedule(int y, int m0, List<AppUser> users, List<Sc
       title: 'Sunday Worship Service - ${dLbl(date)}',
       songleaderId: sl.id,
       songleaderName: sl.fullName,
-      assignments: assignments,
+      assignments: picked,
     ));
   }
   return out;

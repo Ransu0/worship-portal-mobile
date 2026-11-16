@@ -1,0 +1,18 @@
+# Wakes the reminder server once a day. Reminders themselves are sent by a scheduled job
+# inside Supabase (every hour); this daily call keeps the free Supabase project from pausing
+# (free projects pause after 7 days without activity) and is a backup trigger.
+name: Keep reminders awake
+
+on:
+  schedule:
+    - cron: '20 7 * * *'   # 3:20 PM Philippine time
+    - cron: '20 1 * * *'   # 9:20 AM Philippine time
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the reminder server
+        run: curl -fsS --max-time 60 "https://wyeqjkezfzoiezsrfikp.supabase.co/functions/v1/daily-reminders" | head -c 2000

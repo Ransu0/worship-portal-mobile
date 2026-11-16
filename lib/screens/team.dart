@@ -330,7 +330,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
       children: [
         const StateBox(
           StateKind.info,
-          'Changes apply to the next Auto-shuffle. To change a Sunday that is already made, open it and tap "Add someone".',
+          'Changes apply to the next Auto-shuffle. Sundays that are already made stay the same. Delete the month and shuffle again to apply.',
           fontSize: 15,
           weight: w600,
           lead: Ic('info', s: 22, c: C.navy, w: 2),

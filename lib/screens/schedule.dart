@@ -196,8 +196,6 @@ class SundayScreen extends StatelessWidget {
             onPick: admin ? (a) => app.go(Screen.swap, sel: s.id, swap: a) : null,
           ),
         ]),
-        if (admin && !s.isCompleted)
-          Btn('Add someone to this Sunday', icon: 'userplus', iconSize: 18, kind: BtnKind.soft, md: true, onTap: () => app.go(Screen.addSlot, sel: s.id)),
         if (canMark) Btn('Mark as done (+10 points)', icon: 'done', kind: BtnKind.green, onTap: () => app.go(Screen.markdone, sel: s.id)),
         if (s.isCompleted) const StateBox(StateKind.ok, 'Done · points given', fontSize: 16, lead: Ic('check', s: 22, c: C.green, w: 2.6)),
       ],
@@ -331,62 +329,6 @@ class _MarkDoneScreenState extends State<MarkDoneScreen> {
           Text(note, style: tx(14, confirmed ? FontWeight.w400 : w600, absent ? C.red : C.soft)),
         ]),
       ),
-    );
-  }
-}
-
-/// Admin: add one more person to a Sunday, e.g. a second guitar.
-class AddSlotScreen extends StatefulWidget {
-  final AppCtl app;
-  const AddSlotScreen({super.key, required this.app});
-  @override
-  State<AddSlotScreen> createState() => _AddSlotScreenState();
-}
-
-class _AddSlotScreenState extends State<AddSlotScreen> {
-  Cap _role = Cap.guitar;
-  String? _who;
-
-  @override
-  Widget build(BuildContext context) {
-    final app = widget.app;
-    final s = app.sel!;
-    final cands = eligibleReplacements(app.users, s, _role, null);
-    final have = s.assignments.where((a) => a.role == _role).length;
-    final rep = firstOr(cands, (u) => u.id == _who);
-    return Frame(
-      header: BackHeader(title: 'Add to Sunday', sub: dLbl(s.date), onBack: app.back),
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
-      gap: 24,
-      bottom: ActionBar(
-        child: Btn(
-          rep == null ? 'Add' : 'Add ${firstName(rep)} as ${roleLabel[_role]} ${have + 1}',
-          onTap: rep == null ? null : () => app.addToSunday(s, rep.id, _role),
-        ),
-      ),
-      children: [
-        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const H2('Role', size: 18),
-          const SizedBox(height: 14),
-          Chips(gap: 8, children: [
-            for (final c in allCaps.where((c) => c != Cap.songleader))
-              ChipBtn(roleLabel[c]!, height: 44, pressed: _role == c, onTap: () => setState(() {
-                    _role = c;
-                    _who = null;
-                  })),
-          ]),
-          const SizedBox(height: 12),
-          Sub(have == 0 ? 'No ${roleLabel[_role]} on this Sunday yet.' : 'This Sunday has ${plural(have, roleLabel[_role]!)} now.'),
-        ]),
-        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const H2('Who?', size: 18),
-          const SizedBox(height: 14),
-          if (cands.isEmpty) EmptyText('No one else free for ${roleLabel[_role]}. Tick the ministry on their Team page first.'),
-          ...gapped([
-            for (final u in cands) OptRow(label: u.fullName, lead: Ini(u.fullName), pressed: _who == u.id, onTap: () => setState(() => _who = u.id)),
-          ], 10),
-        ]),
-      ],
     );
   }
 }
