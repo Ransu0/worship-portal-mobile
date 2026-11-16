@@ -29,7 +29,7 @@ Updates install over the old version, and you stay signed in.
 
 ### iPhone (website)
 
-**Web app:** `https://cog-worship-team.vercel.app/`. Add this once the first web deploy has run. The address is in the Vercel dashboard and at the end of the **Deploy to Vercel** step in GitHub Actions.
+**Web app:** https://cog-worship-team.vercel.app/. Add this once the first web deploy has run. The address is in the Vercel dashboard and at the end of the **Deploy to Vercel** step in GitHub Actions.
 
 1. Open the link in **Safari**. Other browsers can't install it.
 2. Tap **Share** → **Add to Home Screen** → **Add**.
