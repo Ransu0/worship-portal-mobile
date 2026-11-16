@@ -56,7 +56,7 @@ class _PointsScreenState extends State<PointsScreen> {
             child: Row(children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${me.points}', style: tx(56, w800, C.yellow, 1)),
+                  CountUp(me.points, style: tx(56, w800, C.yellow, 1)),
                   const SizedBox(height: 6),
                   Text('your points', style: tx(16, w600, C.lavText)),
                 ]),
@@ -119,7 +119,7 @@ class _PointsScreenState extends State<PointsScreen> {
         )
       else
         row,
-      if (isOpen) _adjustBox(u),
+      if (isOpen) Reveal(key: ValueKey('adj-${u.id}'), child: _adjustBox(u)),
     ];
   }
 
@@ -265,7 +265,7 @@ class MeScreen extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(color: C.white, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(20)),
         child: Column(children: [
-          Text(big, style: tx(28, w800)),
+          CountUp(int.tryParse(big) ?? 0, style: tx(28, w800)),
           const SizedBox(height: 4),
           Text(small, style: tx(14, w600, C.soft)),
         ]),

@@ -1,4 +1,6 @@
 // Shared building blocks, matching the web redesign's classes (mobile.css).
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../app_ctl.dart';
@@ -35,7 +37,7 @@ class Frame extends StatelessWidget {
         Expanded(
           child: ListView(
             padding: padding,
-            children: gapped(children, gap),
+            children: gapped([for (var i = 0; i < children.length; i++) Appear(index: i, child: children[i])], gap),
           ),
         ),
         if (bottom != null) bottom!,
@@ -178,8 +180,8 @@ class Tag extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------- tappables
-/// Flat tappable with ink ripple and rounded corners.
-class Tap extends StatelessWidget {
+/// Tappable with ink ripple, a small press "squish", and animated colour/border changes.
+class Tap extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final Color color;
@@ -188,6 +190,7 @@ class Tap extends StatelessWidget {
   final EdgeInsets? padding;
   final double? height;
   final double? width;
+  final double pressScale;
   const Tap({
     super.key,
     required this.child,
@@ -198,20 +201,152 @@ class Tap extends StatelessWidget {
     this.padding,
     this.height,
     this.width,
+    this.pressScale = 0.97,
   });
   @override
-  Widget build(BuildContext context) => Container(
-        height: height,
-        width: width,
-        decoration: BoxDecoration(color: color, borderRadius: radius, border: border),
+  State<Tap> createState() => _TapState();
+}
+
+class _TapState extends State<Tap> {
+  bool _down = false;
+  @override
+  Widget build(BuildContext context) {
+    final w = widget;
+    return AnimatedScale(
+      scale: _down && w.onTap != null ? w.pressScale : 1,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        height: w.height,
+        width: w.width,
+        decoration: BoxDecoration(color: w.color, borderRadius: w.radius, border: w.border),
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
-            onTap: onTap,
-            borderRadius: radius,
-            child: padding == null ? child : Padding(padding: padding!, child: child),
+            onTap: w.onTap,
+            onHighlightChanged: (v) => setState(() => _down = v),
+            borderRadius: w.radius,
+            splashColor: const Color(0x142B2D80),
+            highlightColor: const Color(0x0A2B2D80),
+            child: w.padding == null ? w.child : Padding(padding: w.padding!, child: w.child),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------- motion helpers
+/// Fades + slides a child up when it first appears. [index] staggers lists.
+class Appear extends StatefulWidget {
+  final Widget child;
+  final int index;
+  final double dy;
+  const Appear({super.key, required this.child, this.index = 0, this.dy = 14});
+  @override
+  State<Appear> createState() => _AppearState();
+}
+
+class _AppearState extends State<Appear> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
+  late final Animation<double> _a = CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
+
+  @override
+  void initState() {
+    super.initState();
+    final delay = Duration(milliseconds: 45 * math.min(widget.index, 8));
+    if (delay == Duration.zero) {
+      _c.forward();
+    } else {
+      Future.delayed(delay, () {
+        if (mounted) _c.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _a,
+        builder: (context, child) => Opacity(
+          opacity: _a.value,
+          child: Transform.translate(offset: Offset(0, widget.dy * (1 - _a.value)), child: child),
+        ),
+        child: widget.child,
+      );
+}
+
+/// Grows open (height + fade) when it first appears.
+class Reveal extends StatefulWidget {
+  final Widget child;
+  const Reveal({super.key, required this.child});
+  @override
+  State<Reveal> createState() => _RevealState();
+}
+
+class _RevealState extends State<Reveal> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 260))..forward();
+  late final Animation<double> _a = CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizeTransition(
+        sizeFactor: _a,
+        axisAlignment: -1,
+        child: FadeTransition(opacity: _a, child: widget.child),
+      );
+}
+
+/// A short side-to-side shake (e.g. wrong password).
+class Shake extends StatefulWidget {
+  final Widget child;
+  const Shake({super.key, required this.child});
+  @override
+  State<Shake> createState() => _ShakeState();
+}
+
+class _ShakeState extends State<Shake> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 420))..forward();
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _c,
+        builder: (context, child) {
+          final t = _c.value;
+          final dx = (1 - t) * 10 * math.sin(t * math.pi * 6);
+          return Transform.translate(offset: Offset(dx, 0), child: child);
+        },
+        child: widget.child,
+      );
+}
+
+/// Counts a number up to its value.
+class CountUp extends StatelessWidget {
+  final int value;
+  final TextStyle style;
+  const CountUp(this.value, {super.key, required this.style});
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: value.toDouble()),
+        duration: const Duration(milliseconds: 700),
+        curve: Curves.easeOutCubic,
+        builder: (context, v, _) => Text('${v.round()}', style: style),
       );
 }
 
@@ -496,14 +631,27 @@ class BottomNav extends StatelessWidget {
                   onTap: () => onTab(it.$1),
                   borderRadius: BorderRadius.circular(16),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Container(
-                      width: 60,
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutCubic,
+                      width: it.$1 == active ? 60 : 36,
                       height: 32,
                       decoration: BoxDecoration(color: it.$1 == active ? C.lav : Colors.transparent, borderRadius: BorderRadius.circular(16)),
-                      child: Center(child: Ic(it.$3, s: 22, w: it.$1 == active ? 2.3 : 2, c: it.$1 == active ? C.navy : C.soft)),
+                      child: Center(
+                        child: AnimatedScale(
+                          scale: it.$1 == active ? 1.08 : 1,
+                          duration: const Duration(milliseconds: 260),
+                          curve: Curves.easeOutBack,
+                          child: Ic(it.$3, s: 22, w: it.$1 == active ? 2.3 : 2, c: it.$1 == active ? C.navy : C.soft),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 4),
-                    Text(it.$2, style: tx(13, it.$1 == active ? w800 : w600, it.$1 == active ? C.navy : C.soft)),
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 200),
+                      style: tx(13, it.$1 == active ? w800 : w600, it.$1 == active ? C.navy : C.soft),
+                      child: Text(it.$2),
+                    ),
                   ]),
                 ),
               ),
@@ -767,7 +915,8 @@ class OptRow extends StatelessWidget {
       child: Row(children: [
         if (lead != null) ...[lead!, const SizedBox(width: 14)],
         Expanded(child: Text(label, style: tx(17, w700, red ? C.red : C.ink))),
-        Container(
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           width: 24,
           height: 24,
           decoration: BoxDecoration(
@@ -775,19 +924,22 @@ class OptRow extends StatelessWidget {
             border: Border.all(color: pressed ? on : C.line, width: 2),
             color: C.white,
           ),
-          child: pressed
-              ? Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: DecoratedBox(decoration: BoxDecoration(color: on, borderRadius: BorderRadius.circular(8))),
-                )
-              : null,
+          child: AnimatedScale(
+            scale: pressed ? 1 : 0,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutBack,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: DecoratedBox(decoration: BoxDecoration(color: on, borderRadius: BorderRadius.circular(8))),
+            ),
+          ),
         ),
       ]),
     );
   }
 }
 
-/// Two-option segmented control (`.seg`).
+/// Two-option segmented control (`.seg`) with a sliding thumb.
 class Seg extends StatelessWidget {
   final String a, b;
   final bool aOn;
@@ -796,18 +948,45 @@ class Seg extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget item(String l, bool on, VoidCallback f) => Expanded(
-          child: Tap(
+          child: GestureDetector(
             onTap: f,
-            color: on ? C.white : Colors.transparent,
-            radius: BorderRadius.circular(11),
-            height: 46,
-            child: Center(child: Text(l, style: tx(16, w700, on ? C.ink : C.soft))),
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              height: 46,
+              child: Center(
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: tx(16, w700, on ? C.ink : C.soft),
+                  child: Text(l),
+                ),
+              ),
+            ),
           ),
         );
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(color: C.chip, borderRadius: BorderRadius.circular(14)),
-      child: Row(children: [item(a, aOn, onA), const SizedBox(width: 4), item(b, !aOn, onB)]),
+      child: Stack(children: [
+        Positioned.fill(
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            alignment: aOn ? Alignment.centerLeft : Alignment.centerRight,
+            child: FractionallySizedBox(
+              widthFactor: 0.5,
+              heightFactor: 1,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: C.white,
+                  borderRadius: BorderRadius.circular(11),
+                  boxShadow: const [BoxShadow(color: Color(0x14191A2E), blurRadius: 6, offset: Offset(0, 2))],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Row(children: [item(a, aOn, onA), item(b, !aOn, onB)]),
+      ]),
     );
   }
 }
@@ -817,7 +996,8 @@ class Switch2 extends StatelessWidget {
   const Switch2({super.key, required this.on});
   @override
   Widget build(BuildContext context) => AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
         width: 52,
         height: 32,
         padding: const EdgeInsets.all(3),
@@ -874,6 +1054,9 @@ class Input extends StatelessWidget {
   final TextCapitalization caps;
   final TextInputType? keyboard;
   final bool autocorrect;
+  final bool autofocus;
+  final ValueChanged<String>? onSubmitted;
+  final TextInputAction? inputAction;
   const Input({
     super.key,
     required this.controller,
@@ -888,6 +1071,9 @@ class Input extends StatelessWidget {
     this.caps = TextCapitalization.none,
     this.keyboard,
     this.autocorrect = true,
+    this.autofocus = false,
+    this.onSubmitted,
+    this.inputAction,
   });
 
   @override
@@ -910,6 +1096,9 @@ class Input extends StatelessWidget {
       textCapitalization: caps,
       keyboardType: keyboard ?? (multi ? TextInputType.multiline : null),
       autocorrect: autocorrect,
+      autofocus: autofocus,
+      onSubmitted: onSubmitted,
+      textInputAction: multi ? TextInputAction.newline : inputAction,
       style: style ?? tx(size, weight, C.ink, multi ? 1.6 : null),
       decoration: InputDecoration(
         isDense: true,
@@ -1187,6 +1376,49 @@ class WelcomeCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------- sheet + toast
+/// Dimmed backdrop + white sheet that slides up from the bottom.
+class SheetFrame extends StatelessWidget {
+  final Widget child;
+  final VoidCallback onClose;
+  const SheetFrame({super.key, required this.child, required this.onClose});
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.paddingOf(context).bottom + MediaQuery.viewInsetsOf(context).bottom;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, sheet) => Stack(children: [
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: onClose,
+            child: Container(color: Color.fromRGBO(25, 26, 46, 0.45 * t)),
+          ),
+        ),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: FractionalTranslation(translation: Offset(0, 1 - t), child: sheet),
+        ),
+      ]),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.92),
+        child: Material(
+          color: C.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(24, 14, 24, 32 + bottom),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+              Center(child: Container(width: 44, height: 5, decoration: BoxDecoration(color: C.border, borderRadius: BorderRadius.circular(3)))),
+              const SizedBox(height: 22),
+              child,
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class SheetView extends StatelessWidget {
   final String title;
   final String? sub;
@@ -1195,44 +1427,18 @@ class SheetView extends StatelessWidget {
   final VoidCallback onClose;
   const SheetView({super.key, required this.title, this.sub, this.child, required this.actions, required this.onClose});
   @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.paddingOf(context).bottom + MediaQuery.viewInsetsOf(context).bottom;
-    return Stack(children: [
-      Positioned.fill(
-        child: GestureDetector(onTap: onClose, child: Container(color: const Color(0x73191A2E))),
-      ),
-      Align(
-        alignment: Alignment.bottomCenter,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 40, end: 0),
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-          builder: (context, v, child) => Transform.translate(offset: Offset(0, v), child: Opacity(opacity: 1 - v / 40, child: child)),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.92),
-            child: Material(
-              color: C.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(24, 14, 24, 32 + bottom),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-                  Center(child: Container(width: 44, height: 5, decoration: BoxDecoration(color: C.border, borderRadius: BorderRadius.circular(3)))),
-                  const SizedBox(height: 22),
-                  Text(title, style: tx(23, w800)),
-                  if (sub != null) ...[const SizedBox(height: 6), Text(sub!, style: tx(16, FontWeight.w400, C.soft))],
-                  if (child != null) ...[const SizedBox(height: 22), child!],
-                  const SizedBox(height: 22),
-                  actions,
-                  const SizedBox(height: 8),
-                  TextBtn('Cancel', onTap: onClose),
-                ]),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ]);
-  }
+  Widget build(BuildContext context) => SheetFrame(
+        onClose: onClose,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+          Text(title, style: tx(23, w800)),
+          if (sub != null) ...[const SizedBox(height: 6), Text(sub!, style: tx(16, FontWeight.w400, C.soft))],
+          if (child != null) ...[const SizedBox(height: 22), child!],
+          const SizedBox(height: 22),
+          actions,
+          const SizedBox(height: 8),
+          TextBtn('Cancel', onTap: onClose),
+        ]),
+      );
 }
 
 class Feat extends StatelessWidget {

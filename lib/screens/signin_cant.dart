@@ -6,18 +6,20 @@ import '../ui/icons.dart';
 import '../ui/theme.dart';
 import '../ui/widgets.dart';
 
-class SignInScreen extends StatefulWidget {
+/// Sign in, shown as a sheet over whatever screen you're on.
+class SignInOverlay extends StatefulWidget {
   final AppCtl app;
-  const SignInScreen({super.key, required this.app});
+  const SignInOverlay({super.key, required this.app});
   @override
-  State<SignInScreen> createState() => _SignInScreenState();
+  State<SignInOverlay> createState() => _SignInOverlayState();
 }
 
-class _SignInScreenState extends State<SignInScreen> {
+class _SignInOverlayState extends State<SignInOverlay> {
   final _u = TextEditingController();
   final _p = TextEditingController();
   bool _show = false;
   String _err = '';
+  int _shake = 0;
 
   @override
   void dispose() {
@@ -27,65 +29,69 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   void _submit() {
-    FocusScope.of(context).unfocus();
     final e = widget.app.signIn(_u.text, _p.text);
-    if (e != null) setState(() => _err = e);
+    if (e != null) {
+      setState(() {
+        _err = e;
+        _shake++;
+      });
+    } else {
+      FocusManager.instance.primaryFocus?.unfocus();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        Stack(children: [
+    final app = widget.app;
+    return SheetFrame(
+      onClose: app.closeSignIn,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
           Container(
-            width: double.infinity,
-            padding: EdgeInsets.fromLTRB(28, 72 + top, 28, 48),
-            decoration: const BoxDecoration(color: C.navy, borderRadius: BorderRadius.vertical(bottom: Radius.circular(36))),
-            child: Column(children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(color: C.white, borderRadius: BorderRadius.circular(60)),
-                child: const Center(child: Logo(w: 84, h: 92)),
-              ),
-              const SizedBox(height: 20),
-              const H1('Worship Team', color: C.white, size: 26),
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(color: C.white, borderRadius: BorderRadius.circular(32), border: Border.all(color: C.line, width: 2)),
+            child: const Center(child: Logo(w: 42, h: 46)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Sign in', style: tx(23, w800)),
+              const SizedBox(height: 2),
+              Text('Worship Team', style: tx(15, w600, C.soft)),
             ]),
           ),
-          Positioned(
-            left: 12,
-            top: top + 14,
-            child: IconBtn(icon: 'back', size: 24, fg: C.white, onTap: widget.app.back, label: 'Back'),
-          ),
         ]),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: gapped([
-            Field(
-              label: 'Username',
-              child: Input(controller: _u, autocorrect: false, keyboard: TextInputType.text),
+        const SizedBox(height: 22),
+        Field(label: 'Username', child: Input(controller: _u, autocorrect: false, autofocus: true, inputAction: TextInputAction.next, onSubmitted: (_) => FocusScope.of(context).nextFocus())),
+        const SizedBox(height: 18),
+        Field(
+          label: 'Password',
+          child: Input(
+            controller: _p,
+            obscure: !_show,
+            autocorrect: false,
+            inputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+            suffix: Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: TextBtn(_show ? 'Hide' : 'Show', size: 15, color: C.navy, onTap: () => setState(() => _show = !_show)),
             ),
-            Field(
-              label: 'Password',
-              child: Input(
-                controller: _p,
-                obscure: !_show,
-                autocorrect: false,
-                suffix: Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: TextBtn(_show ? 'Hide' : 'Show', size: 15, color: C.navy, onTap: () => setState(() => _show = !_show)),
-                ),
-              ),
-            ),
-            if (_err.isNotEmpty)
-              StateBox(StateKind.bad, _err, fontSize: 15, padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
-            Padding(padding: const EdgeInsets.only(top: 8), child: Btn('Sign in', onTap: _submit)),
-            const Sub('Forgot password? Ask your leader.', size: 15, align: TextAlign.center),
-          ], 24)),
+          ),
         ),
-      ],
+        if (_err.isNotEmpty)
+          Reveal(
+            key: ValueKey('err$_shake'),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Shake(child: StateBox(StateKind.bad, _err, fontSize: 15, padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12))),
+            ),
+          ),
+        const SizedBox(height: 22),
+        Btn('Sign in', onTap: _submit),
+        const SizedBox(height: 14),
+        const Sub('Forgot password? Ask your leader.', size: 15, align: TextAlign.center),
+      ]),
     );
   }
 }

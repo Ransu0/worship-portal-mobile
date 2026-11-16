@@ -22,7 +22,7 @@ class Welcome extends StatelessWidget {
         title: 'Welcome!',
         text: "See this Sunday's team, songs and the schedule. On the team? Sign in to confirm your part.",
         onClose: app.dismissWelcome,
-        action: Btn('Sign in', md: true, onTap: () => app.go(Screen.signin)),
+        action: Btn('Sign in', md: true, onTap: () => app.openSignIn()),
       );
     }
     if (role == Role.admin) {
@@ -91,7 +91,7 @@ class HomeScreen extends StatelessWidget {
     final s = app.upcoming;
     final role = app.role;
     final Widget? right = role == Role.guest
-        ? PillBtn('Sign in', onTap: () => app.go(Screen.signin))
+        ? PillBtn('Sign in', onTap: () => app.openSignIn())
         : role == Role.admin
             ? null
             : AvatarBtn(initial(app.me?.fullName ?? ''), onTap: () => app.tab(NavTab.me));
@@ -229,7 +229,16 @@ class AdminHome extends StatelessWidget {
               borderRadius: BorderRadius.circular(5),
               child: Stack(children: [
                 Container(height: 10, color: const Color(0x2EFFFFFF)),
-                FractionallySizedBox(alignment: Alignment.centerLeft, widthFactor: pct, child: Container(height: 10, decoration: BoxDecoration(color: C.yellow, borderRadius: BorderRadius.circular(5)))),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: pct),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, v, _) => FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: v,
+                    child: Container(height: 10, decoration: BoxDecoration(color: C.yellow, borderRadius: BorderRadius.circular(5))),
+                  ),
+                ),
               ]),
             ),
           ]),

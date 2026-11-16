@@ -25,7 +25,7 @@ class Notify {
     try {
       tzdata.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation('Asia/Manila'));
-      const settings = InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher'));
+      const settings = InitializationSettings(android: AndroidInitializationSettings('@drawable/ic_stat_notify'));
       await _plugin.initialize(settings, onDidReceiveNotificationResponse: _handle);
       final launch = await _plugin.getNotificationAppLaunchDetails();
       if (launch != null && launch.didNotificationLaunchApp) launchResponse = launch.notificationResponse;
@@ -58,6 +58,8 @@ class Notify {
           importance: Importance.high,
           priority: Priority.high,
           color: const Color(0xFF2B2D80),
+          icon: 'ic_stat_notify',
+          largeIcon: const DrawableResourceAndroidBitmap('notify_large'),
           styleInformation: BigTextStyleInformation(body),
           actions: ask
               ? const <AndroidNotificationAction>[

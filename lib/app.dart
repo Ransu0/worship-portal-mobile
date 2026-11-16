@@ -51,7 +51,6 @@ class Shell extends StatelessWidget {
     if (v == Screen.cant && findMine(app.upcoming, me?.id) == null) v = Screen.home;
     return switch (v) {
       Screen.home => HomeScreen(app: app),
-      Screen.signin => SignInScreen(app: app),
       Screen.cant => CantScreen(app: app),
       Screen.songs => SongsScreen(app: app),
       Screen.editsongs => EditSongsScreen(key: ValueKey('edit-${app.selId}'), app: app),
@@ -82,8 +81,12 @@ class Shell extends StatelessWidget {
         body: Stack(children: [
           Positioned.fill(
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
+              duration: const Duration(milliseconds: 300),
+              reverseDuration: const Duration(milliseconds: 220),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
               layoutBuilder: (current, previous) => Stack(fit: StackFit.expand, children: [...previous, if (current != null) current]),
+              transitionBuilder: (child, anim) => _transition(child, anim),
               child: KeyedSubtree(key: ValueKey(app.view), child: _screen()),
             ),
           ),
@@ -94,12 +97,25 @@ class Shell extends StatelessWidget {
     );
   }
 
+  /// Forward: new screen slides in from the right. Back: from the left. Tabs: fade.
+  Widget _transition(Widget child, Animation<double> anim) {
+    final incoming = (child.key as ValueKey?)?.value == app.view;
+    final fade = FadeTransition(opacity: anim, child: child);
+    if (app.dir == NavDir.tab) {
+      return ScaleTransition(scale: Tween(begin: incoming ? 0.985 : 1.0, end: 1.0).animate(anim), child: fade);
+    }
+    final dx = app.dir == NavDir.forward ? 0.12 : -0.12;
+    final begin = incoming ? Offset(dx, 0) : Offset(-dx * 0.5, 0);
+    return SlideTransition(position: Tween(begin: begin, end: Offset.zero).animate(anim), child: fade);
+  }
+
   Widget? _overlay(BuildContext context) {
     final sheet = app.sheet;
     if (app.confirmCard) {
       final card = _confirmCard(context);
       if (card != null) return card;
     }
+    if (app.signInOpen) return SignInOverlay(app: app);
     if (sheet == null) return null;
     switch (sheet.kind) {
       case 'shuffle':

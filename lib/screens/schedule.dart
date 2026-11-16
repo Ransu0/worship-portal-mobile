@@ -232,10 +232,10 @@ class _SwapScreenState extends State<SwapScreen> {
         for (final u in cands) OptRow(label: u.fullName, lead: Ini(u.fullName), pressed: _who == u.id, onTap: () => setState(() => _who = u.id)),
         OptRow(label: 'No one — mark absent', red: true, pressed: _who == 'absent', onTap: () => setState(() => _who = 'absent')),
         if (_who == 'absent')
-          Padding(
+          Reveal(child: Padding(
             padding: const EdgeInsets.only(top: 12),
             child: StateBox(StateKind.warn, '${t.userName} gets 1 absence', fontSize: 16, lead: const Ic('alert', s: 22, c: C.waitFg)),
-          ),
+          )),
       ],
     );
   }

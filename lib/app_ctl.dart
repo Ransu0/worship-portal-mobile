@@ -14,11 +14,14 @@ import 'notify.dart';
 import 'repo.dart';
 import 'shuffle.dart';
 
-enum Screen { home, schedule, points, me, team, signin, cant, songs, editsongs, sunday, swap, markdone, editmember, importNames }
+enum Screen { home, schedule, points, me, team, cant, songs, editsongs, sunday, swap, markdone, editmember, importNames }
 
 enum NavTab { home, schedule, points, me, team }
 
 enum Role { guest, member, leader, admin }
+
+/// Which way the last navigation went (drives the slide animation).
+enum NavDir { forward, back, tab }
 
 class SheetState {
   final String kind; // shuffle | clear | resetAdmin | export
@@ -52,6 +55,8 @@ class AppCtl extends ChangeNotifier {
   String monthKey = monthKeyOf(DateTime.now());
   SheetState? sheet;
   bool confirmCard = false;
+  bool signInOpen = false;
+  NavDir dir = NavDir.tab;
   String toastMsg = '';
   Timer? _toastTimer;
   Timer? _remoteTimer;
@@ -174,25 +179,39 @@ class AppCtl extends ChangeNotifier {
     if (setEdit) editUserId = editId;
     _stack.add(view);
     view = v;
+    dir = NavDir.forward;
     notifyListeners();
   }
 
   void back() {
     view = _stack.isEmpty ? Screen.home : _stack.removeLast();
+    dir = NavDir.back;
     notifyListeners();
   }
 
   void tab(NavTab t) {
     _stack.clear();
     sheet = null;
+    dir = NavDir.tab;
     view = Screen.values.byName(t.name);
     if (t == NavTab.schedule && upcoming != null) monthKey = upcoming!.month;
     notifyListeners();
   }
 
   void home() {
+    if (view != Screen.home) dir = _stack.isEmpty ? NavDir.tab : NavDir.back;
     _stack.clear();
     view = Screen.home;
+    notifyListeners();
+  }
+
+  void openSignIn() {
+    signInOpen = true;
+    notifyListeners();
+  }
+
+  void closeSignIn() {
+    signInOpen = false;
     notifyListeners();
   }
 
@@ -218,6 +237,10 @@ class AppCtl extends ChangeNotifier {
 
   /// Android back button. Returns true when the app should close.
   bool handleBack() {
+    if (signInOpen) {
+      closeSignIn();
+      return false;
+    }
     if (sheet != null) {
       closeSheet();
       return false;
@@ -250,9 +273,7 @@ class AppCtl extends ChangeNotifier {
     final cur = me;
     if (cur == null) {
       toast('Sign in to reply');
-      _stack.clear();
-      view = Screen.signin;
-      notifyListeners();
+      openSignIn();
       return;
     }
     final mine = findMine(s, cur.id);
@@ -364,6 +385,7 @@ class AppCtl extends ChangeNotifier {
     if (u == null || !u.active) return 'Wrong username or password.';
     if (password != (u.password.isEmpty ? defaultPassword : u.password)) return 'Wrong username or password.';
     me = u;
+    signInOpen = false;
     _savePref(_kMe, u.id);
     SharedPreferences.getInstance().then((p) {
       remindersOn = p.getString('rem_${u.id}') == '1';
