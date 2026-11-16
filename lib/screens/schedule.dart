@@ -56,7 +56,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       under: app.isUser
           ? Container(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              decoration: const BoxDecoration(color: C.white, border: Border(bottom: BorderSide(color: C.line))),
+              decoration: BoxDecoration(color: C.surface, border: Border(bottom: BorderSide(color: C.line))),
               child: Seg(a: 'Mine', b: 'All', aOn: _mineOnly, onA: () => setState(() => _mineOnly = true), onB: () => setState(() => _mineOnly = false)),
             )
           : null,
@@ -118,15 +118,15 @@ class _SunRow extends StatelessWidget {
     } else {
       note = isNow ? 'This Sunday' : '${s.assignments.length} serving';
     }
-    final dateBg = isNow ? C.navy : (done ? C.chip : C.lav);
-    final dateFg = isNow ? C.yellow : (done ? C.soft : C.navy);
+    final dateBg = isNow ? C.brand : (done ? C.chip : C.lav);
+    final dateFg = isNow ? C.brandMark : (done ? C.soft : C.navy);
     // Done Sundays are greyed out so the list focuses on what's coming up.
     return AnimatedOpacity(
       opacity: done ? 0.5 : 1,
       duration: const Duration(milliseconds: 250),
       child: Tap(
       onTap: () => app.go(Screen.sunday, sel: s.id),
-      color: done ? C.bg : C.white,
+      color: done ? C.bg : C.surface,
       radius: BorderRadius.circular(20),
       border: Border.all(color: isNow ? C.navy : (done ? C.line2 : C.line), width: 2),
       padding: const EdgeInsets.all(16),
@@ -173,15 +173,15 @@ class SundayScreen extends StatelessWidget {
       children: [
         Tap(
           onTap: () => app.go(Screen.songs, sel: s.id),
-          color: C.navy,
+          color: C.brand,
           radius: BorderRadius.circular(18),
           height: 60,
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(children: [
-            const Ic('music', s: 22, c: C.yellow, w: 2),
+            Ic('music', s: 22, c: C.brandMark, w: 2),
             const SizedBox(width: 8),
-            Expanded(child: Text(songs.isEmpty ? 'Songs: none yet' : plural(songs.length, 'song'), style: tx(17, w700, C.white))),
-            const Ic('chev', s: 20, c: C.white, w: 2.5),
+            Expanded(child: Text(songs.isEmpty ? 'Songs: none yet' : plural(songs.length, 'song'), style: tx(17, w700, C.onBrand))),
+            Ic('chev', s: 20, c: C.onBrand, w: 2.5),
           ]),
         ),
         CardBox(gap: 0, children: [
@@ -202,7 +202,7 @@ class SundayScreen extends StatelessWidget {
           ),
         ]),
         if (canMark) Btn('Mark as done (+10 points)', icon: 'done', kind: BtnKind.green, onTap: () => app.go(Screen.markdone, sel: s.id)),
-        if (s.isCompleted) const StateBox(StateKind.ok, 'Done · points given', fontSize: 16, lead: Ic('check', s: 22, c: C.green, w: 2.6)),
+        if (s.isCompleted) StateBox(StateKind.ok, 'Done · points given', fontSize: 16, lead: Ic('check', s: 22, c: C.green, w: 2.6)),
       ],
     );
   }
@@ -249,12 +249,12 @@ class _SwapScreenState extends State<SwapScreen> {
         if (_who == 'absent')
           Reveal(child: Padding(
             padding: const EdgeInsets.only(top: 12),
-            child: StateBox(StateKind.warn, '${t.userName} gets 1 absence', fontSize: 16, lead: const Ic('alert', s: 22, c: C.waitFg)),
+            child: StateBox(StateKind.warn, '${t.userName} gets 1 absence', fontSize: 16, lead: Ic('alert', s: 22, c: C.waitFg)),
           )),
         if (_who == 'remove')
           Reveal(child: Padding(
             padding: const EdgeInsets.only(top: 12),
-            child: StateBox(StateKind.info, 'This Sunday will have one less ${roleLabel[t.role]}. No absence counted.', fontSize: 16, lead: const Ic('info', s: 22, c: C.navy, w: 2)),
+            child: StateBox(StateKind.info, 'This Sunday will have one less ${roleLabel[t.role]}. No absence counted.', fontSize: 16, lead: Ic('info', s: 22, c: C.navy, w: 2)),
           )),
       ],
     );
@@ -290,7 +290,7 @@ class _MarkDoneScreenState extends State<MarkDoneScreen> {
         child: Btn('Give +10 to $count', kind: BtnKind.green, onTap: () => app.markDone(s, _ticked.entries.where((e) => e.value).map((e) => e.key).toSet())),
       ),
       children: [
-        const StateBox(StateKind.info, "Only members who confirmed get +10. Untick anyone who didn't come.", fontSize: 15, weight: w600, lead: Ic('info', s: 22, c: C.navy, w: 2)),
+        StateBox(StateKind.info, "Only members who confirmed get +10. Untick anyone who didn't come.", fontSize: 15, weight: w600, lead: Ic('info', s: 22, c: C.navy, w: 2)),
         for (final a in s.assignments) _attRow(a),
       ],
     );
@@ -313,7 +313,7 @@ class _MarkDoneScreenState extends State<MarkDoneScreen> {
             setState(() => _ticked[a.userId] = !(_ticked[a.userId] ?? false));
           }
         },
-        color: C.white,
+        color: C.surface,
         radius: BorderRadius.circular(16),
         border: Border.all(color: on ? C.green : C.line, width: 2),
         height: 64,
@@ -323,11 +323,11 @@ class _MarkDoneScreenState extends State<MarkDoneScreen> {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: on ? C.green : (confirmed ? C.white : C.chip),
+              color: on ? C.green : (confirmed ? C.surface : C.chip),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: on ? C.green : C.border, width: 2),
             ),
-            child: confirmed ? const Center(child: Ic('check', s: 16, c: C.white, w: 3.5)) : const Center(child: Ic('x', s: 14, c: C.soft, w: 3)),
+            child: confirmed ? const Center(child: Ic('check', s: 16, c: C.white, w: 3.5)) : Center(child: Ic('x', s: 14, c: C.soft, w: 3)),
           ),
           const SizedBox(width: 14),
           Expanded(child: Text(a.userName, style: tx(16, w700))),

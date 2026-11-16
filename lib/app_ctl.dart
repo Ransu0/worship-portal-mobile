@@ -2,9 +2,11 @@
 // app's MobileApp.tsx + StorageService.
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show WidgetsBinding, WidgetsBindingObserver;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'config.dart';
@@ -13,6 +15,7 @@ import 'models.dart';
 import 'notify.dart';
 import 'repo.dart';
 import 'shuffle.dart';
+import 'ui/theme.dart';
 import 'webpush/webpush.dart';
 
 enum Screen { home, schedule, points, me, team, teamSetup, cant, songs, editsongs, sunday, swap, markdone, editmember, importNames }
@@ -20,6 +23,9 @@ enum Screen { home, schedule, points, me, team, teamSetup, cant, songs, editsong
 enum NavTab { home, schedule, points, me, team }
 
 enum Role { guest, member, leader, admin }
+
+/// Follow the phone / light / dark / gold (near-black + gold).
+enum ThemeChoice { system, light, dark, gold }
 
 /// Which way the last navigation went (drives the slide animation).
 enum NavDir { forward, back, tab }
@@ -38,8 +44,48 @@ T? firstOr<T>(Iterable<T> xs, bool Function(T) test) {
   return null;
 }
 
-class AppCtl extends ChangeNotifier {
+class AppCtl extends ChangeNotifier with WidgetsBindingObserver {
   final repo = Repo();
+
+  // ---------------- theme ----------------
+  ThemeChoice themeChoice = ThemeChoice.system;
+  static const _kTheme = 'theme_mode';
+
+  bool get isDark =>
+      themeChoice == ThemeChoice.dark ||
+      themeChoice == ThemeChoice.gold ||
+      (themeChoice == ThemeChoice.system && ui.PlatformDispatcher.instance.platformBrightness == ui.Brightness.dark);
+
+  /// Call once before runApp so the first frame already has the right colours.
+  Future<void> loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    themeChoice = ThemeChoice.values.firstWhere((t) => t.name == prefs.getString(_kTheme), orElse: () => ThemeChoice.system);
+    _applyTheme();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  Future<void> setTheme(ThemeChoice t) async {
+    if (t == themeChoice) return;
+    themeChoice = t;
+    _applyTheme();
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kTheme, t.name);
+  }
+
+  void _applyTheme() {
+    C.dark = isDark;
+    C.gold = themeChoice == ThemeChoice.gold;
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    if (themeChoice != ThemeChoice.system) return;
+    final d = isDark;
+    if (d == C.dark) return;
+    C.dark = d;
+    notifyListeners();
+  }
 
   List<AppUser> users = [];
   List<Schedule> schedules = [];

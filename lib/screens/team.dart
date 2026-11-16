@@ -50,7 +50,7 @@ class _TeamScreenState extends State<TeamScreen> {
       children: [
         Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(color: C.white, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(24)),
+          decoration: BoxDecoration(color: C.surface, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(24)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Tag('Admin roster control', icon: 'shield'),
             const SizedBox(height: 14),
@@ -92,6 +92,7 @@ class _TeamScreenState extends State<TeamScreen> {
           if (list.isEmpty) const EmptyText('No members found.'),
           ...gapped([for (final u in list) _memberCard(u)], 10),
         ]),
+        AppearanceCard(app: app),
         SignOutMenu(app: app, showName: true),
         const VersionLine(),
       ],
@@ -103,7 +104,7 @@ class _TeamScreenState extends State<TeamScreen> {
     final ownPw = u.password.isNotEmpty && u.password != defaultPassword;
     return Tap(
       onTap: () => app.go(Screen.editmember, setEdit: true, editId: u.id),
-      color: C.white,
+      color: C.surface,
       radius: BorderRadius.circular(18),
       border: Border.all(color: C.line),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -295,7 +296,7 @@ class _ImportScreenState extends State<ImportScreen> {
             for (final c in allCaps) ChipBtn(roleLabel[c]!, height: 44, pressed: _cap == c, onTap: () => setState(() => _cap = c)),
           ]),
         ),
-        const StateBox(
+        StateBox(
           StateKind.info,
           'Usernames like ana.cruz · default password',
           fontSize: 15,
@@ -328,7 +329,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
       gap: 12,
       bottom: ActionBar(child: Btn('Save', onTap: () => app.saveTeamCounts(_n))),
       children: [
-        const StateBox(
+        StateBox(
           StateKind.info,
           'Changes apply to the next Auto-shuffle. Sundays that are already made stay the same. Delete the month and shuffle again to apply.',
           fontSize: 15,
@@ -347,7 +348,7 @@ class _TeamSetupScreenState extends State<TeamSetupScreen> {
     final locked = c == Cap.songleader;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-      decoration: BoxDecoration(color: C.white, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(color: C.surface, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(18)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Circle(color: C.lav, size: 40, child: Ic(roleIcon[c]!, s: 20, c: C.navy, w: 2.1)),

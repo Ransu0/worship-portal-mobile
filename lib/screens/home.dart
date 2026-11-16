@@ -51,7 +51,7 @@ class Welcome extends StatelessWidget {
             : "You'll get a reminder on Sunday afternoon for the next Sunday, and one each day until you reply. Reply by Wednesday 3 PM.",
         onClose: app.dismissWelcome,
         action: app.remindersOn
-            ? const StateBox(StateKind.ok, 'Reminders are on',
+            ? StateBox(StateKind.ok, 'Reminders are on',
                 fontSize: 15, padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12), lead: Ic('check', s: 20, c: C.green, w: 2.6))
             : Btn(app.needsInstallForReminders ? 'How to add to Home Screen' : 'Turn on reminders', icon: 'bell', iconSize: 18, md: true, onTap: app.enableReminders),
       );
@@ -108,7 +108,7 @@ class HomeScreen extends StatelessWidget {
           H1(title),
           if (app.welcomeOn) Welcome(app: app),
           if (!app.loaded)
-            const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(color: C.navy)))
+            Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(color: C.navy)))
           else
             EmptyCard(
               title: 'No service scheduled',
@@ -144,11 +144,11 @@ class HomeScreen extends StatelessWidget {
           block.add(StateBox(
             StateKind.ok,
             "You're confirmed",
-            lead: const Circle(color: C.green, child: Ic('check', s: 20, c: C.white, w: 3)),
+            lead: Circle(color: C.green, child: Ic('check', s: 20, c: C.white, w: 3)),
             trailing: closed ? null : TextBtn("Can't make it?", underline: true, size: 15, color: C.okTxt, onTap: () => app.go(Screen.cant)),
           ));
         } else if (closed) {
-          block.add(const StateBox(StateKind.warn, 'Reply time ended. Ask your leader.', fontSize: 16, lead: Ic('clock', s: 22, c: C.waitFg)));
+          block.add(StateBox(StateKind.warn, 'Reply time ended. Ask your leader.', fontSize: 16, lead: Ic('clock', s: 22, c: C.waitFg)));
         } else {
           block.add(Row(children: [
             Expanded(child: Btn("I'll be there", icon: 'check', iconW: 2.6, kind: BtnKind.green, onTap: () => app.confirm(s))),
@@ -185,20 +185,23 @@ class HomeScreen extends StatelessWidget {
 
 class ByLine extends StatelessWidget {
   final Schedule s;
-  final Color color;
-  const ByLine({super.key, required this.s, this.color = C.waitFg});
+  final Color? color;
+  const ByLine({super.key, required this.s, this.color});
   @override
-  Widget build(BuildContext context) => Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+  Widget build(BuildContext context) {
+    final color = this.color ?? C.waitFg;
+    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Ic('clock', s: 15, w: 2.4, c: color),
         const SizedBox(width: 6),
         Text('Reply by ${replyByLabel(s.date)}', style: tx(14, w700, color)),
       ]);
+  }
 }
 
 class OfflineNote extends StatelessWidget {
   const OfflineNote({super.key});
   @override
-  Widget build(BuildContext context) => const StateBox(StateKind.warn, 'Offline. Showing the last saved data.', fontSize: 15, lead: Ic('alert', s: 20, c: C.waitFg));
+  Widget build(BuildContext context) => StateBox(StateKind.warn, 'Offline. Showing the last saved data.', fontSize: 15, lead: Ic('alert', s: 20, c: C.waitFg));
 }
 
 class AdminHome extends StatelessWidget {

@@ -53,7 +53,7 @@ class _PointsScreenState extends State<PointsScreen> {
         if (app.isUser && me != null)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-            decoration: BoxDecoration(color: C.navy, borderRadius: BorderRadius.circular(24)),
+            decoration: BoxDecoration(color: C.hero, borderRadius: BorderRadius.circular(24), border: C.gold ? Border.all(color: const Color(0x40FFD60A)) : null),
             child: Row(children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -101,7 +101,7 @@ class _PointsScreenState extends State<PointsScreen> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(color: i < 3 ? _medal[i] : C.chip, borderRadius: BorderRadius.circular(16)),
-          child: Center(child: Text('${i + 1}', style: tx(15, w800))),
+          child: Center(child: Text('${i + 1}', style: tx(15, w800, i < 3 ? C.onYellow : null))),
         ),
         Grow(title: '${u.fullName}${mine ? ' (you)' : ''}', sub: admin ? plural(u.absentCount, 'absence') : null),
         Text('${u.points}', style: tx(17, w800)),
@@ -134,7 +134,7 @@ class _PointsScreenState extends State<PointsScreen> {
         Seg(a: 'Add', b: 'Remove', aOn: _add, onA: () => setState(() => _add = true), onB: () => setState(() => _add = false)),
         Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: C.white, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: C.surface, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(16)),
           child: Row(children: [
             _stepBtn('−', () => setState(() => _amount = _amount > 5 ? _amount - 5 : 5)),
             Expanded(
@@ -216,7 +216,7 @@ class MeScreen extends StatelessWidget {
           Container(
             width: 96,
             height: 96,
-            decoration: BoxDecoration(color: C.navy, borderRadius: BorderRadius.circular(48)),
+            decoration: BoxDecoration(color: C.hero, borderRadius: BorderRadius.circular(48)),
             child: Center(child: Text(initial(me.fullName), style: tx(38, w800, C.yellow))),
           ),
           const SizedBox(height: 12),
@@ -226,7 +226,7 @@ class MeScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(color: C.yellow, borderRadius: BorderRadius.circular(999)),
-              child: Text(me.capabilities.map((c) => roleLabel[c]).join(' · '), style: tx(14, w800)),
+              child: Text(me.capabilities.map((c) => roleLabel[c]).join(' · '), style: tx(14, w800, C.onYellow)),
             ),
         ]),
         Row(children: [
@@ -247,7 +247,7 @@ class MeScreen extends StatelessWidget {
           on: app.remindersOn,
           onTap: app.remindersOn ? app.disableReminders : app.enableReminders,
           label: Row(children: [
-            const Ic('bell', s: 20, c: C.navy, w: 2),
+            Ic('bell', s: 20, c: C.navy, w: 2),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -257,6 +257,7 @@ class MeScreen extends StatelessWidget {
             ),
           ]),
         ),
+        AppearanceCard(app: app),
         SignOutMenu(app: app),
         const VersionLine(),
       ],
@@ -265,7 +266,7 @@ class MeScreen extends StatelessWidget {
 
   Widget _stat(String big, String small) => Container(
         padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(color: C.white, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(color: C.surface, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(20)),
         child: Column(children: [
           CountUp(int.tryParse(big) ?? 0, style: tx(28, w800)),
           const SizedBox(height: 4),
@@ -281,13 +282,13 @@ class SignOutMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(color: C.white, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(24)),
+        decoration: BoxDecoration(color: C.surface, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(24)),
         child: Tap(
           onTap: app.signOut,
           padding: const EdgeInsets.symmetric(horizontal: 20),
           height: 60,
           child: Row(children: [
-            const Ic('logout', s: 20, w: 2, c: C.red),
+            Ic('logout', s: 20, w: 2, c: C.red),
             const SizedBox(width: 14),
             Expanded(child: Text('Sign out${showName && app.me != null ? ' (${app.me!.fullName})' : ''}', style: tx(16, w700, C.red))),
           ]),
@@ -302,5 +303,29 @@ class VersionLine extends StatelessWidget {
         'Worship Team v$appVersion${appBuild == 'dev' ? ' (dev)' : ' · build $appBuild'}',
         textAlign: TextAlign.center,
         style: tx(13, w600, C.soft),
+      );
+}
+
+/// Light / Dark / System picker (Me page and Team page).
+class AppearanceCard extends StatelessWidget {
+  final AppCtl app;
+  const AppearanceCard({super.key, required this.app});
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        decoration: BoxDecoration(color: C.surface, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(20)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Ic(C.gold ? 'star' : (app.isDark ? 'moon' : 'sun'), s: 20, c: C.navy, w: 2),
+            const SizedBox(width: 12),
+            Text('Appearance', style: tx(16, w700)),
+          ]),
+          const SizedBox(height: 12),
+          SegN(
+            items: const [('Auto', 'phone'), ('Light', 'sun'), ('Dark', 'moon'), ('Gold', 'star')],
+            index: ThemeChoice.values.indexOf(app.themeChoice),
+            onPick: (i) => app.setTheme(ThemeChoice.values[i]),
+          ),
+        ]),
       );
 }

@@ -140,9 +140,9 @@ class _CantScreenState extends State<CantScreen> {
         ]),
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (who == 'none')
-            const StateBox(StateKind.warn, 'Counts as 1 absence', fontSize: 16, lead: Ic('alert', s: 22, c: C.waitFg))
+            StateBox(StateKind.warn, 'Counts as 1 absence', fontSize: 16, lead: Ic('alert', s: 22, c: C.waitFg))
           else
-            const StateBox(StateKind.ok, 'No absence counted', fontSize: 16, lead: Ic('check', s: 22, c: C.green, w: 2.6)),
+            StateBox(StateKind.ok, 'No absence counted', fontSize: 16, lead: Ic('check', s: 22, c: C.green, w: 2.6)),
           if (mine.a.role.name == 'songleader' && rep != null) ...[
             const SizedBox(height: 16),
             Sub('${rep.fullName} will lead and can edit the songs.'),

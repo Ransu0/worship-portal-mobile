@@ -13,6 +13,7 @@ Future<void> main() async {
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   await Notify.init();
   final app = AppCtl();
+  await app.loadTheme();
   runApp(WorshipApp(app: app));
   await app.start();
 }

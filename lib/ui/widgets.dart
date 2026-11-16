@@ -64,7 +64,7 @@ class _HeaderBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
     return Container(
-      decoration: const BoxDecoration(color: C.white, border: Border(bottom: BorderSide(color: C.line))),
+      decoration: BoxDecoration(color: C.surface, border: Border(bottom: BorderSide(color: C.line))),
       padding: EdgeInsets.only(top: top),
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: minHeight),
@@ -138,11 +138,11 @@ class TitleHeader extends StatelessWidget {
 
 class H1 extends StatelessWidget {
   final String text;
-  final Color color;
+  final Color? color;
   final double size;
-  const H1(this.text, {super.key, this.color = C.ink, this.size = 28});
+  const H1(this.text, {super.key, this.color, this.size = 28});
   @override
-  Widget build(BuildContext context) => Text(text, style: tx(size, w800, color).copyWith(letterSpacing: -0.5));
+  Widget build(BuildContext context) => Text(text, style: tx(size, w800, color ?? C.ink).copyWith(letterSpacing: -0.5));
 }
 
 class H2 extends StatelessWidget {
@@ -157,11 +157,11 @@ class Sub extends StatelessWidget {
   final String text;
   final double size;
   final TextAlign? align;
-  final Color color;
+  final Color? color;
   final FontWeight weight;
-  const Sub(this.text, {super.key, this.size = 14, this.align, this.color = C.soft, this.weight = FontWeight.w400});
+  const Sub(this.text, {super.key, this.size = 14, this.align, this.color, this.weight = FontWeight.w400});
   @override
-  Widget build(BuildContext context) => Text(text, textAlign: align, style: tx(size, weight, color));
+  Widget build(BuildContext context) => Text(text, textAlign: align, style: tx(size, weight, color ?? C.soft));
 }
 
 class Tag extends StatelessWidget {
@@ -228,8 +228,8 @@ class _TapState extends State<Tap> {
             onTap: w.onTap,
             onHighlightChanged: (v) => setState(() => _down = v),
             borderRadius: w.radius,
-            splashColor: const Color(0x142B2D80),
-            highlightColor: const Color(0x0A2B2D80),
+            splashColor: C.dark ? const Color(0x1AFFFFFF) : const Color(0x142B2D80),
+            highlightColor: C.dark ? const Color(0x0DFFFFFF) : const Color(0x0A2B2D80),
             child: w.padding == null ? w.child : Padding(padding: w.padding!, child: w.child),
           ),
         ),
@@ -356,7 +356,7 @@ class IconBtn extends StatelessWidget {
   final VoidCallback onTap;
   final String? label;
   final Color bg;
-  final Color fg;
+  final Color? fg;
   final double w;
   final double radius;
   const IconBtn({
@@ -366,7 +366,7 @@ class IconBtn extends StatelessWidget {
     this.size = 20,
     this.label,
     this.bg = Colors.transparent,
-    this.fg = C.ink,
+    this.fg,
     this.w = 2.2,
     this.radius = 22,
   });
@@ -380,7 +380,7 @@ class IconBtn extends StatelessWidget {
           radius: BorderRadius.circular(radius),
           width: 44,
           height: 44,
-          child: Center(child: Ic(icon, s: size, c: fg, w: w)),
+          child: Center(child: Ic(icon, s: size, c: fg ?? C.ink, w: w)),
         ),
       );
 }
@@ -420,8 +420,8 @@ class Btn extends StatelessWidget {
     BoxBorder? border;
     switch (kind) {
       case BtnKind.navy:
-        bg = C.navy;
-        fg = C.white;
+        bg = C.brand;
+        fg = C.onBrand;
       case BtnKind.green:
         bg = C.green;
         fg = C.white;
@@ -429,11 +429,11 @@ class Btn extends StatelessWidget {
         bg = C.red;
         fg = C.white;
       case BtnKind.outlineRed:
-        bg = C.white;
+        bg = C.surface;
         fg = C.red;
         border = Border.all(color: C.line, width: 2);
       case BtnKind.outline:
-        bg = C.white;
+        bg = C.surface;
         fg = C.ink;
         border = Border.all(color: C.line, width: 2);
       case BtnKind.soft:
@@ -444,7 +444,7 @@ class Btn extends StatelessWidget {
         fg = C.navy;
       case BtnKind.yellow:
         bg = C.yellow;
-        fg = C.ink;
+        fg = C.onYellow;
       case BtnKind.ghostW:
         bg = Colors.transparent;
         fg = C.white;
@@ -531,12 +531,14 @@ class MiniBtn extends StatelessWidget {
 class TextBtn extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
-  final Color color;
+  final Color? color;
   final double size;
   final bool underline;
-  const TextBtn(this.label, {super.key, required this.onTap, this.color = C.ink, this.size = 16, this.underline = false});
+  const TextBtn(this.label, {super.key, required this.onTap, this.color, this.size = 16, this.underline = false});
   @override
-  Widget build(BuildContext context) => Tap(
+  Widget build(BuildContext context) {
+    final color = this.color ?? C.ink;
+    return Tap(
         onTap: onTap,
         radius: BorderRadius.circular(10),
         height: underline ? 44 : 48,
@@ -550,6 +552,7 @@ class TextBtn extends StatelessWidget {
               )),
         ),
       );
+  }
 }
 
 class MoreLink extends StatelessWidget {
@@ -564,7 +567,7 @@ class MoreLink extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Text(label, style: tx(15, w700, C.navy)),
           const SizedBox(width: 2),
-          const Ic('chev', s: 18, w: 2.5, c: C.navy),
+          Ic('chev', s: 18, w: 2.5, c: C.navy),
         ]),
       );
 }
@@ -576,11 +579,11 @@ class PillBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Tap(
         onTap: onTap,
-        color: C.navy,
+        color: C.brand,
         radius: BorderRadius.circular(22),
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 18),
-        child: Center(widthFactor: 1, child: Text(label, style: tx(15, w700, C.white))),
+        child: Center(widthFactor: 1, child: Text(label, style: tx(15, w700, C.onBrand))),
       );
 }
 
@@ -591,11 +594,11 @@ class AvatarBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Tap(
         onTap: onTap,
-        color: C.navy,
+        color: C.brand,
         radius: BorderRadius.circular(22),
         width: 44,
         height: 44,
-        child: Center(child: Text(letter, style: tx(16, w800, C.yellow))),
+        child: Center(child: Text(letter, style: tx(16, w800, C.brandMark))),
       );
 }
 
@@ -619,7 +622,7 @@ class BottomNav extends StatelessWidget {
     return Container(
       height: 80 + bottom,
       padding: EdgeInsets.fromLTRB(8, 8, 8, 16 + bottom),
-      decoration: const BoxDecoration(color: C.white, border: Border(top: BorderSide(color: C.line))),
+      decoration: BoxDecoration(color: C.surface, border: Border(top: BorderSide(color: C.line))),
       child: Row(
         children: [
           for (final it in items)
@@ -634,22 +637,18 @@ class BottomNav extends StatelessWidget {
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 260),
                       curve: Curves.easeOutCubic,
-                      width: it.$1 == active ? 60 : 36,
+                      // Every tab is the same size; only the colour changes.
+                      width: 60,
                       height: 32,
-                      decoration: BoxDecoration(color: it.$1 == active ? C.lav : Colors.transparent, borderRadius: BorderRadius.circular(16)),
+                      decoration: BoxDecoration(color: it.$1 == active ? C.lav : C.lav.withAlpha(0), borderRadius: BorderRadius.circular(16)),
                       child: Center(
-                        child: AnimatedScale(
-                          scale: it.$1 == active ? 1.08 : 1,
-                          duration: const Duration(milliseconds: 260),
-                          curve: Curves.easeOutBack,
-                          child: Ic(it.$3, s: 22, w: it.$1 == active ? 2.3 : 2, c: it.$1 == active ? C.navy : C.soft),
-                        ),
+                        child: Ic(it.$3, s: 22, w: 2.2, c: it.$1 == active ? C.navy : C.soft),
                       ),
                     ),
                     const SizedBox(height: 4),
                     AnimatedDefaultTextStyle(
                       duration: const Duration(milliseconds: 200),
-                      style: tx(13, it.$1 == active ? w800 : w600, it.$1 == active ? C.navy : C.soft),
+                      style: tx(13, w700, it.$1 == active ? C.navy : C.soft),
                       child: Text(it.$2),
                     ),
                   ]),
@@ -668,7 +667,7 @@ class ActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: EdgeInsets.fromLTRB(20, 16, 20, 24 + MediaQuery.paddingOf(context).bottom),
-        decoration: const BoxDecoration(color: C.white, border: Border(top: BorderSide(color: C.line))),
+        decoration: BoxDecoration(color: C.surface, border: Border(top: BorderSide(color: C.line))),
         child: child,
       );
 }
@@ -684,7 +683,7 @@ class CardBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: padding ?? (list ? const EdgeInsets.symmetric(horizontal: 20, vertical: 8) : const EdgeInsets.all(20)),
-        decoration: BoxDecoration(color: C.white, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(radius)),
+        decoration: BoxDecoration(color: C.surface, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(radius)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: gapped(children, list ? 0 : gap)),
       );
 }
@@ -727,7 +726,7 @@ class LRow extends StatelessWidget {
         constraints: BoxConstraints(minHeight: minHeight),
         decoration: BoxDecoration(
           color: bg,
-          border: first ? null : const Border(top: BorderSide(color: C.line2)),
+          border: first ? null : Border(top: BorderSide(color: C.line2)),
         ),
         child: Row(children: _gapRow(children, 14)),
       );
@@ -781,8 +780,8 @@ class KeyBadge extends StatelessWidget {
         constraints: BoxConstraints(minWidth: big ? 40 : 36),
         height: big ? 36 : 32,
         padding: EdgeInsets.symmetric(horizontal: big ? 8 : 6),
-        decoration: BoxDecoration(color: big ? C.navy : C.lav, borderRadius: BorderRadius.circular(10)),
-        child: Center(widthFactor: 1, child: Text(k.isEmpty ? '–' : k, style: tx(big ? 16 : 15, w800, big ? C.white : C.navy))),
+        decoration: BoxDecoration(color: big ? C.brand : C.lav, borderRadius: BorderRadius.circular(10)),
+        child: Center(widthFactor: 1, child: Text(k.isEmpty ? '–' : k, style: tx(big ? 16 : 15, w800, big ? C.onBrand : C.navy))),
       );
 }
 
@@ -807,7 +806,7 @@ class EmptyCard extends StatelessWidget {
         painter: DashBorder(color: C.border, radius: 24),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-          decoration: BoxDecoration(color: C.white, borderRadius: BorderRadius.circular(24)),
+          decoration: BoxDecoration(color: C.surface, borderRadius: BorderRadius.circular(24)),
           child: Column(children: [
             Text(title, textAlign: TextAlign.center, style: tx(18, w800)),
             const SizedBox(height: 14),
@@ -871,18 +870,18 @@ class ChipBtn extends StatelessWidget {
   final VoidCallback onTap;
   final bool small;
   final double? height;
-  final Color borderColor;
+  final Color? borderColor;
   const ChipBtn(this.label,
-      {super.key, required this.pressed, required this.onTap, this.small = false, this.height, this.borderColor = C.border});
+      {super.key, required this.pressed, required this.onTap, this.small = false, this.height, this.borderColor});
   @override
   Widget build(BuildContext context) => Tap(
         onTap: onTap,
-        color: pressed ? C.navy : C.white,
+        color: pressed ? C.brand : C.surface,
         radius: BorderRadius.circular(999),
-        border: Border.all(color: pressed ? C.navy : (small ? C.line : borderColor), width: 2),
+        border: Border.all(color: pressed ? C.brand : (small ? C.line : (borderColor ?? C.border)), width: 2),
         height: height ?? (small ? 40 : 46),
         padding: EdgeInsets.symmetric(horizontal: small ? 14 : 18),
-        child: Center(widthFactor: 1, child: Text(label, style: tx(small ? 14 : 15, w700, pressed ? C.white : C.ink))),
+        child: Center(widthFactor: 1, child: Text(label, style: tx(small ? 14 : 15, w700, pressed ? C.onBrand : C.ink))),
       );
 }
 
@@ -907,7 +906,7 @@ class OptRow extends StatelessWidget {
     final on = red ? C.red : C.navy;
     return Tap(
       onTap: onTap,
-      color: C.white,
+      color: C.surface,
       radius: BorderRadius.circular(16),
       border: Border.all(color: pressed ? on : C.line, width: 2),
       height: 68,
@@ -922,7 +921,7 @@ class OptRow extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: pressed ? on : C.line, width: 2),
-            color: C.white,
+            color: C.surface,
           ),
           child: AnimatedScale(
             scale: pressed ? 1 : 0,
@@ -977,15 +976,68 @@ class Seg extends StatelessWidget {
               heightFactor: 1,
               child: Container(
                 decoration: BoxDecoration(
-                  color: C.white,
+                  color: C.surfaceHi,
                   borderRadius: BorderRadius.circular(11),
-                  boxShadow: const [BoxShadow(color: Color(0x14191A2E), blurRadius: 6, offset: Offset(0, 2))],
+                  boxShadow: [BoxShadow(color: C.dark ? const Color(0x66000000) : const Color(0x14191A2E), blurRadius: 6, offset: const Offset(0, 2))],
                 ),
               ),
             ),
           ),
         ),
         Row(children: [item(a, aOn, onA), item(b, !aOn, onB)]),
+      ]),
+    );
+  }
+}
+
+/// Segmented control with any number of options, each with an icon.
+class SegN extends StatelessWidget {
+  final List<(String label, String icon)> items;
+  final int index;
+  final void Function(int) onPick;
+  const SegN({super.key, required this.items, required this.index, required this.onPick});
+  @override
+  Widget build(BuildContext context) {
+    final n = items.length;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: C.chip, borderRadius: BorderRadius.circular(14)),
+      child: Stack(children: [
+        Positioned.fill(
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment(n == 1 ? 0 : -1 + 2 * index / (n - 1), 0),
+            child: FractionallySizedBox(
+              widthFactor: 1 / n,
+              heightFactor: 1,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: C.surfaceHi,
+                  borderRadius: BorderRadius.circular(11),
+                  boxShadow: [BoxShadow(color: C.dark ? const Color(0x66000000) : const Color(0x14191A2E), blurRadius: 6, offset: const Offset(0, 2))],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Row(children: [
+          for (var i = 0; i < n; i++)
+            Expanded(
+              child: GestureDetector(
+                onTap: () => onPick(i),
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  height: 46,
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Ic(items[i].$2, s: n > 3 ? 15 : 17, w: 2.2, c: i == index ? C.navy : C.soft),
+                    SizedBox(width: n > 3 ? 4 : 6),
+                    Text(items[i].$1, style: tx(n > 3 ? 14 : 15, w700, i == index ? C.ink : C.soft)),
+                  ]),
+                ),
+              ),
+            ),
+        ]),
       ]),
     );
   }
@@ -1015,7 +1067,7 @@ class ToggleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Tap(
         onTap: onTap,
-        color: C.white,
+        color: C.surface,
         radius: BorderRadius.circular(16),
         border: Border.all(color: C.line),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -1080,8 +1132,8 @@ class Input extends StatelessWidget {
   Widget build(BuildContext context) {
     final multi = lines != null && lines! > 1;
     final (double h, double r, Color fill, Color border, double size, FontWeight weight, double pad) = switch (kind) {
-      InputKind.normal => (56.0, 14.0, C.white, C.border, 17.0, FontWeight.w400, 16.0),
-      InputKind.sm => (48.0, 12.0, C.white, C.line, 16.0, w700, 12.0),
+      InputKind.normal => (56.0, 14.0, C.surface, C.border, 17.0, FontWeight.w400, 16.0),
+      InputKind.sm => (48.0, 12.0, C.surface, C.line, 16.0, w700, 12.0),
       InputKind.soft => (44.0, 12.0, C.bg, Colors.transparent, 15.0, FontWeight.w400, 12.0),
       InputKind.search => (52.0, 14.0, C.chip, Colors.transparent, 17.0, FontWeight.w400, 16.0),
     };
@@ -1110,7 +1162,7 @@ class Input extends StatelessWidget {
         enabledBorder: ob,
         border: ob,
         focusedBorder: ob.copyWith(borderSide: BorderSide(color: kind == InputKind.normal ? C.navy : (border == Colors.transparent ? C.navy : C.navy), width: 2)),
-        prefixIcon: kind == InputKind.search ? const Padding(padding: EdgeInsets.only(left: 16, right: 10), child: Ic('search', s: 20, c: C.soft)) : null,
+        prefixIcon: kind == InputKind.search ? Padding(padding: EdgeInsets.only(left: 16, right: 10), child: Ic('search', s: 20, c: C.soft)) : null,
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         suffixIcon: suffix,
       ),
@@ -1128,7 +1180,7 @@ class Hero2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(color: C.navy, borderRadius: BorderRadius.circular(24)),
+        decoration: BoxDecoration(color: C.hero, borderRadius: BorderRadius.circular(24), border: C.gold ? Border.all(color: const Color(0x40FFD60A)) : null),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             Expanded(
@@ -1180,7 +1232,7 @@ class ChipY extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(color: C.yellow, borderRadius: BorderRadius.circular(999)),
-        child: Text(text, style: tx(14, w800, C.ink)),
+        child: Text(text, style: tx(14, w800, C.onYellow)),
       );
 }
 
@@ -1282,11 +1334,11 @@ class _RoleCard extends StatelessWidget {
     final st = statusOf(a);
     final sty = stStyle(st);
     final forName = coveringFor(a);
-    final cardBg = lead ? C.lav : (mine ? C.white : C.bg);
-    final icBg = lead ? C.navy : (mine ? C.lav : C.white);
-    final icFg = lead ? C.yellow : C.navy;
+    final cardBg = lead ? C.lav : (mine ? C.surface : C.bg);
+    final icBg = lead ? C.brand : (mine ? C.lav : C.surface);
+    final icFg = lead ? C.brandMark : C.navy;
     final icSize = lead ? 46.0 : 34.0;
-    final badgeBorder = lead ? C.lav : (mine ? C.white : C.bg);
+    final badgeBorder = lead ? C.lav : (mine ? C.surface : C.bg);
     return Semantics(
       label: '${roleLabel[a.role]}: ${a.userName}${forName != null ? ', covering for $forName' : ''}${signedIn ? ', ${statusLabel[st]}' : ''}',
       button: onPick != null,
@@ -1331,8 +1383,8 @@ class _RoleCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: C.navy, borderRadius: BorderRadius.circular(6)),
-                      child: Text('You', style: tx(10, w800, C.white)),
+                      decoration: BoxDecoration(color: C.brand, borderRadius: BorderRadius.circular(6)),
+                      child: Text('You', style: tx(10, w800, C.onBrand)),
                     ),
                   ],
                 ]),
@@ -1365,7 +1417,7 @@ class WelcomeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: C.white, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(24)),
+        decoration: BoxDecoration(color: C.surface, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(24)),
         child: Stack(clipBehavior: Clip.none, children: [
           Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Align(
@@ -1405,7 +1457,7 @@ class SheetFrame extends StatelessWidget {
         Positioned.fill(
           child: GestureDetector(
             onTap: onClose,
-            child: Container(color: Color.fromRGBO(25, 26, 46, 0.45 * t)),
+            child: Container(color: C.dim.withAlpha(((C.dark ? 0.6 : 0.45) * t * 255).round())),
           ),
         ),
         Align(
@@ -1416,7 +1468,7 @@ class SheetFrame extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.92),
         child: Material(
-          color: C.white,
+          color: C.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           child: SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(24, 14, 24, 32 + bottom),
@@ -1483,7 +1535,7 @@ class ToastView extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  decoration: BoxDecoration(color: C.ink, borderRadius: BorderRadius.circular(14)),
+                  decoration: BoxDecoration(color: C.toastBg, borderRadius: BorderRadius.circular(14)),
                   child: Text(msg.isEmpty ? ' ' : msg, style: tx(15, w700, C.white), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
               ),

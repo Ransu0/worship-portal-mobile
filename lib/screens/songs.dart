@@ -65,7 +65,7 @@ class _SongCard extends StatelessWidget {
     final chords = 'https://www.google.com/search?q=${Uri.encodeQueryComponent('${x.title} chords')}';
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: C.white, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: C.surface, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(20)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Expanded(child: Text(x.title.isEmpty ? 'Untitled' : x.title, style: tx(18, w800))),
@@ -82,7 +82,7 @@ class _SongCard extends StatelessWidget {
               radius: BorderRadius.circular(12),
               height: 48,
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const PlayIc(color: C.red),
+                PlayIc(color: C.red),
                 const SizedBox(width: 8),
                 Text('Listen', style: tx(15, w700, C.red)),
               ]),
@@ -96,7 +96,7 @@ class _SongCard extends StatelessWidget {
               radius: BorderRadius.circular(12),
               height: 48,
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Ic('music', s: 16, c: C.ink),
+                Ic('music', s: 16, c: C.ink),
                 const SizedBox(width: 8),
                 Text('Chords', style: tx(15, w700)),
               ]),
@@ -192,7 +192,7 @@ class _EditSongsScreenState extends State<EditSongsScreen> {
           Container(
             key: ValueKey(_songs[i].id),
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: C.white, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: C.surface, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(20)),
             child: Column(children: [
               Row(children: [
                 Container(

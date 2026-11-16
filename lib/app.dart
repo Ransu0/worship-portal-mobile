@@ -20,18 +20,21 @@ class WorshipApp extends StatelessWidget {
   const WorshipApp({super.key, required this.app});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Worship Team',
-        debugShowCheckedModeBanner: false,
-        theme: appTheme(),
-        home: AnnotatedRegion<SystemUiOverlayStyle>(
-          value: const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.dark,
-            systemNavigationBarColor: Colors.white,
-            systemNavigationBarIconBrightness: Brightness.dark,
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: app,
+        builder: (context, _) => MaterialApp(
+          title: 'Worship Team',
+          debugShowCheckedModeBanner: false,
+          theme: appTheme(),
+          home: AnnotatedRegion<SystemUiOverlayStyle>(
+            value: overlayStyle(),
+            // Keyed on the mode so every widget (const ones too) repaints with
+            // the new colours; the switcher cross-fades light <-> dark.
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              child: KeyedSubtree(key: ValueKey('${C.dark}${C.gold}'), child: Shell(app: app)),
+            ),
           ),
-          child: ListenableBuilder(listenable: app, builder: (context, _) => Shell(app: app)),
         ),
       );
 }
@@ -199,7 +202,7 @@ class Shell extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(color: C.bg, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(14)),
             child: SingleChildScrollView(
-              child: SelectableText(text, style: const TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.5, color: C.ink)),
+              child: SelectableText(text, style: TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.5, color: C.ink)),
             ),
           ),
         );
@@ -221,7 +224,7 @@ class Shell extends StatelessWidget {
       curve: Curves.easeOut,
       builder: (context, v, child) => Transform.translate(offset: Offset(0, v), child: Opacity(opacity: 1 - v / 40, child: child)),
       child: Container(
-        color: C.navy,
+        color: C.hero,
         padding: EdgeInsets.fromLTRB(24, 56 + pad.top, 24, 32 + pad.bottom),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
