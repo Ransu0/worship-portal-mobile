@@ -93,7 +93,18 @@ class HomeScreen extends StatelessWidget {
     final s = app.upcoming;
     final role = app.role;
     final Widget? right = role == Role.guest
-        ? PillBtn('Sign in', onTap: () => app.openSignIn())
+        ? Row(mainAxisSize: MainAxisSize.min, children: [
+            IconBtn(
+              icon: C.gold ? 'star' : (C.dark ? 'moon' : 'sun'),
+              bg: C.chip,
+              fg: C.navy,
+              size: 19,
+              label: 'Appearance',
+              onTap: app.openThemePicker,
+            ),
+            const SizedBox(width: 8),
+            PillBtn('Sign in', onTap: () => app.openSignIn()),
+          ])
         : role == Role.admin
             ? null
             : AvatarBtn(initial(app.me?.fullName ?? ''), onTap: () => app.tab(NavTab.me));

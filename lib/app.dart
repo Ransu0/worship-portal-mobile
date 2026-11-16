@@ -115,6 +115,7 @@ class Shell extends StatelessWidget {
 
   Widget? _overlay(BuildContext context) {
     final sheet = app.sheet;
+    if (app.themePickerOpen) return ThemePicker(app: app);
     if (app.confirmCard) {
       final card = _confirmCard(context);
       if (card != null) return card;

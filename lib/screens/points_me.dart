@@ -329,3 +329,109 @@ class AppearanceCard extends StatelessWidget {
         ]),
       );
 }
+
+/// "Choose your look" — shown the first time the app opens on a device (and
+/// from the guest header). The choice is saved on this device only; it can be
+/// changed later in Appearance on the Me / Team page.
+class ThemePicker extends StatefulWidget {
+  final AppCtl app;
+  const ThemePicker({super.key, required this.app});
+  @override
+  State<ThemePicker> createState() => _ThemePickerState();
+}
+
+class _ThemePickerState extends State<ThemePicker> {
+  late ThemeChoice _sel = widget.app.themeChoice;
+
+  static const _opts = [
+    (ThemeChoice.system, 'Auto', 'Follows your phone'),
+    (ThemeChoice.light, 'Light', 'Navy and yellow'),
+    (ThemeChoice.dark, 'Dark', 'Navy on black'),
+    (ThemeChoice.gold, 'Gold', 'Black and gold'),
+  ];
+
+  // (background, card, accent) used to draw each little preview.
+  static const _swatch = {
+    ThemeChoice.light: (Color(0xFFF6F5F1), Color(0xFFFFFFFF), Color(0xFF2B2D80)),
+    ThemeChoice.dark: (Color(0xFF0C0D15), Color(0xFF161722), Color(0xFF3B3FB8)),
+    ThemeChoice.gold: (Color(0xFF0A0907), Color(0xFF15130E), Color(0xFFE9AE2E)),
+  };
+
+  Widget _mini(ThemeChoice t) {
+    final s = _swatch[t]!;
+    return Container(
+      color: s.$1,
+      padding: const EdgeInsets.all(8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Container(height: 18, decoration: BoxDecoration(color: s.$2, borderRadius: BorderRadius.circular(5))),
+        const SizedBox(height: 8),
+        Row(children: [
+          Flexible(child: Container(width: 30, height: 10, decoration: BoxDecoration(color: s.$3, borderRadius: BorderRadius.circular(5)))),
+          const SizedBox(width: 4),
+          Container(width: 10, height: 10, decoration: BoxDecoration(color: C.yellow, borderRadius: BorderRadius.circular(5))),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _preview(ThemeChoice t) => ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: 64,
+          child: t == ThemeChoice.system
+              ? Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Expanded(child: _mini(ThemeChoice.light)),
+                  Expanded(child: _mini(ThemeChoice.dark)),
+                ])
+              : _mini(t),
+        ),
+      );
+
+  Widget _tile((ThemeChoice, String, String) o) {
+    final on = _sel == o.$1;
+    return Tap(
+      onTap: () => setState(() => _sel = o.$1),
+      color: C.surface,
+      radius: BorderRadius.circular(18),
+      border: Border.all(color: on ? C.navy : C.line, width: 2),
+      padding: const EdgeInsets.all(10),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _preview(o.$1),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(child: Text(o.$2, style: tx(16, w800))),
+          AnimatedOpacity(
+            opacity: on ? 1 : 0,
+            duration: const Duration(milliseconds: 180),
+            child: Ic('check', s: 18, c: C.navy, w: 2.8),
+          ),
+        ]),
+        Text(o.$3, style: tx(13, w600, C.soft), maxLines: 1, overflow: TextOverflow.ellipsis),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => SheetFrame(
+        onClose: () => widget.app.setTheme(_sel),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+          Text('Choose your look', style: tx(23, w800)),
+          const SizedBox(height: 6),
+          const Sub('Saved on this phone. You can change it anytime in Appearance.', size: 16),
+          const SizedBox(height: 20),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: _tile(_opts[0])),
+            const SizedBox(width: 12),
+            Expanded(child: _tile(_opts[1])),
+          ]),
+          const SizedBox(height: 12),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: _tile(_opts[2])),
+            const SizedBox(width: 12),
+            Expanded(child: _tile(_opts[3])),
+          ]),
+          const SizedBox(height: 20),
+          Btn('Continue', onTap: () => widget.app.setTheme(_sel)),
+        ]),
+      );
+}

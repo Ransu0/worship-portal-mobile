@@ -49,6 +49,8 @@ class AppCtl extends ChangeNotifier with WidgetsBindingObserver {
 
   // ---------------- theme ----------------
   ThemeChoice themeChoice = ThemeChoice.system;
+  /// "Choose your look" sheet: shown on first open (nothing saved yet), or from the guest header.
+  bool themePickerOpen = false;
   static const _kTheme = 'theme_mode';
 
   bool get isDark =>
@@ -60,17 +62,25 @@ class AppCtl extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
     themeChoice = ThemeChoice.values.firstWhere((t) => t.name == prefs.getString(_kTheme), orElse: () => ThemeChoice.system);
+    themePickerOpen = !prefs.containsKey(_kTheme);
     _applyTheme();
     WidgetsBinding.instance.addObserver(this);
   }
 
+  /// Saves the look on this device and closes the picker if it was open.
   Future<void> setTheme(ThemeChoice t) async {
-    if (t == themeChoice) return;
+    final changed = t != themeChoice || themePickerOpen;
     themeChoice = t;
+    themePickerOpen = false;
     _applyTheme();
-    notifyListeners();
+    if (changed) notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kTheme, t.name);
+  }
+
+  void openThemePicker() {
+    themePickerOpen = true;
+    notifyListeners();
   }
 
   void _applyTheme() {
@@ -296,6 +306,10 @@ class AppCtl extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Android back button. Returns true when the app should close.
   bool handleBack() {
+    if (themePickerOpen) {
+      setTheme(themeChoice);
+      return false;
+    }
     if (signInOpen) {
       closeSignIn();
       return false;
