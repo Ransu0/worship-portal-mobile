@@ -61,9 +61,15 @@ class _TeamScreenState extends State<TeamScreen> {
             ]),
             const SizedBox(height: 10),
             Row(children: [
-              rb('Copy all logins', 'copy', BtnKind.soft, () => app.exportLogins(app.users, 'All member logins')),
+              rb('Team per Sunday', 'team', BtnKind.soft, () => app.go(Screen.teamSetup)),
               const SizedBox(width: 10),
+              rb('Copy all logins', 'copy', BtnKind.soft, () => app.exportLogins(app.users, 'All member logins')),
+            ]),
+            const SizedBox(height: 10),
+            Row(children: [
               rb('Reset to Admin', 'trash', BtnKind.outlineRed, () => app.openSheet('resetAdmin')),
+              const SizedBox(width: 10),
+              const Expanded(child: SizedBox()),
             ]),
           ]),
         ),
@@ -87,6 +93,7 @@ class _TeamScreenState extends State<TeamScreen> {
           ...gapped([for (final u in list) _memberCard(u)], 10),
         ]),
         SignOutMenu(app: app, showName: true),
+        const VersionLine(),
       ],
     );
   }
@@ -298,4 +305,101 @@ class _ImportScreenState extends State<ImportScreen> {
       ],
     );
   }
+}
+
+/// Admin: how many of each role the auto-shuffle puts on every Sunday.
+class TeamSetupScreen extends StatefulWidget {
+  final AppCtl app;
+  const TeamSetupScreen({super.key, required this.app});
+  @override
+  State<TeamSetupScreen> createState() => _TeamSetupScreenState();
+}
+
+class _TeamSetupScreenState extends State<TeamSetupScreen> {
+  late final Map<Cap, int> _n = Map.of(widget.app.teamCounts);
+
+  int _have(Cap c) => widget.app.users.where((u) => u.active && u.capabilities.contains(c)).length;
+
+  @override
+  Widget build(BuildContext context) {
+    final app = widget.app;
+    return Frame(
+      header: BackHeader(title: 'Team per Sunday', sub: 'Used by Auto-shuffle', onBack: app.back),
+      gap: 12,
+      bottom: ActionBar(child: Btn('Save', onTap: () => app.saveTeamCounts(_n))),
+      children: [
+        const StateBox(
+          StateKind.info,
+          'Changes apply to the next Auto-shuffle. To change a Sunday that is already made, open it and tap "Add someone".',
+          fontSize: 15,
+          weight: w600,
+          lead: Ic('info', s: 22, c: C.navy, w: 2),
+        ),
+        for (final c in allCaps) _row(c),
+      ],
+    );
+  }
+
+  Widget _row(Cap c) {
+    final n = _n[c] ?? 0;
+    final everyone = n < 0;
+    final have = _have(c);
+    final locked = c == Cap.songleader;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: BoxDecoration(color: C.white, border: Border.all(color: C.line), borderRadius: BorderRadius.circular(18)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Circle(color: C.lav, size: 40, child: Ic(roleIcon[c]!, s: 20, c: C.navy, w: 2.1)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(roleLabel[c]!, style: tx(16, w700)),
+              Text(locked ? 'Always 1 · takes turns' : '${plural(have, 'member')} with this ministry', style: tx(13, FontWeight.w400, C.soft)),
+            ]),
+          ),
+          if (locked)
+            Text('1', style: tx(22, w800, C.navy))
+          else if (everyone)
+            Text('All', style: tx(18, w800, C.navy))
+          else ...[
+            _step('−', n > 0 ? () => setState(() => _n[c] = n - 1) : null),
+            SizedBox(width: 44, child: Text('$n', textAlign: TextAlign.center, style: tx(22, w800, n == 0 ? C.soft : C.navy))),
+            _step('+', n < 6 ? () => setState(() => _n[c] = n + 1) : null),
+          ],
+        ]),
+        if (!locked) ...[
+          const SizedBox(height: 10),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _n[c] = everyone ? 1 : -1),
+            child: Row(children: [
+              Switch2(on: everyone),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Everyone with ${roleLabel[c]} every Sunday', style: tx(14, w600, C.soft))),
+            ]),
+          ),
+          if (!everyone && n > have && have > 0)
+            Reveal(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text('Only ${plural(have, 'member')} can play this, so some Sundays get fewer.', style: tx(13, w600, C.waitFg)),
+              ),
+            ),
+        ],
+      ]),
+    );
+  }
+
+  Widget _step(String l, VoidCallback? f) => Opacity(
+        opacity: f == null ? 0.35 : 1,
+        child: Tap(
+          onTap: f,
+          color: C.chip,
+          radius: BorderRadius.circular(12),
+          width: 44,
+          height: 44,
+          child: Center(child: Text(l, style: tx(24, w700))),
+        ),
+      );
 }

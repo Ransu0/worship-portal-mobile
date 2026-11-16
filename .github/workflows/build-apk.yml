@@ -1,19 +1,23 @@
-# Builds the Android APK on GitHub.
-# - Every push and pull request: checks the code, runs the tests, builds the APK
-#   (download it from the run's "Artifacts" section).
-# - Push a tag like v1.0.0: also publishes the APK as a GitHub Release.
-# - "Run workflow" button: build on demand.
+# Builds the signed Android APK on GitHub.
+#
+# Versioning
+#   - The version number lives in pubspec.yaml (`version: 1.0.0+1`). Only the part
+#     before "+" matters; the build number is the GitHub run number.
+#   - Push to main / pull request → test build, e.g. "1.0.0 · build 14" (download under Artifacts).
+#   - Push a tag vX.Y.Z → release build with that version, published on the Releases page,
+#     and the README's "Latest release" section is updated automatically.
+#     The tag must match pubspec.yaml (tag v1.0.1 needs `version: 1.0.1+...`).
 name: Build APK
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ['v*.*.*']
   pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: write # needed to publish Releases
+  contents: write # publish Releases and update the README
 
 concurrency:
   group: build-${{ github.ref }}
@@ -23,8 +27,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
     env:
-      # Optional release signing key (see README → "Signing key").
       KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -33,6 +39,27 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Work out the version
+        id: ver
+        run: |
+          PUBSPEC=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            if [ "${TAG#v}" != "$PUBSPEC" ]; then
+              echo "::error::Tag $TAG does not match pubspec.yaml version $PUBSPEC. Update pubspec.yaml first."
+              exit 1
+            fi
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$PUBSPEC" >> "$GITHUB_OUTPUT"
+          echo "Building version $PUBSPEC, build ${{ github.run_number }}"
+
+      - name: Releases must be signed
+        if: startsWith(github.ref, 'refs/tags/v') && env.KEYSTORE_BASE64 == ''
+        run: |
+          echo "::error::Add the signing key secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_PASSWORD, KEY_ALIAS) before releasing."
+          exit 1
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -72,25 +99,82 @@ jobs:
           EOF
 
       - name: Build APK
-        run: flutter build apk --release --build-number=${{ github.run_number }}
+        run: |
+          flutter build apk --release \
+            --build-name=${{ steps.ver.outputs.version }} \
+            --build-number=${{ github.run_number }} \
+            --dart-define=APP_VERSION=${{ steps.ver.outputs.version }} \
+            --dart-define=APP_BUILD=${{ github.run_number }}
 
       - name: Name the APK
         run: |
-          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')
+          V=${{ steps.ver.outputs.version }}
           mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-release.apk "dist/worship-team-${VERSION}-build${{ github.run_number }}.apk"
+          if [ -n "${{ steps.ver.outputs.tag }}" ]; then
+            cp build/app/outputs/flutter-apk/app-release.apk "dist/worship-team-v$V.apk"
+            # same file under a fixed name, so ".../releases/latest/download/worship-team.apk" always works
+            cp build/app/outputs/flutter-apk/app-release.apk "dist/worship-team.apk"
+          else
+            cp build/app/outputs/flutter-apk/app-release.apk "dist/worship-team-v$V-build${{ github.run_number }}.apk"
+          fi
           ls -l dist
 
-      - name: Upload APK
+      - name: Upload APK (artifact)
         uses: actions/upload-artifact@v4
         with:
           name: worship-team-apk
           path: dist/*.apk
           retention-days: 30
 
-      - name: Publish release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish release
+        if: steps.ver.outputs.tag != ''
         uses: softprops/action-gh-release@v2
         with:
+          name: Worship Team ${{ steps.ver.outputs.tag }}
           files: dist/*.apk
           generate_release_notes: true
+          body: |
+            **Download:** `worship-team.apk` below. Install it on Android (allow installs from unknown sources if asked).
+            Updating from an older version installs over it; your sign-in stays.
+
+  update-readme:
+    needs: build
+    if: needs.build.outputs.tag != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Write the latest release into README.md
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          export DATE=$(TZ=Asia/Manila date '+%b %-d, %Y')
+          python3 - <<'PY'
+          import os, re
+          tag, repo, date = os.environ['TAG'], os.environ['REPO'], os.environ['DATE']
+          block = (
+              "<!-- latest-release:start -->\n"
+              f"**Latest release: {tag}** ({date})\n\n"
+              f"- Download the app: https://github.com/{repo}/releases/latest/download/worship-team.apk\n"
+              f"- Release notes: https://github.com/{repo}/releases/tag/{tag}\n"
+              f"- All releases: https://github.com/{repo}/releases\n"
+              "<!-- latest-release:end -->"
+          )
+          p = 'README.md'
+          s = open(p, encoding='utf-8').read()
+          s = re.sub(r'<!-- latest-release:start -->.*?<!-- latest-release:end -->', block, s, flags=re.S)
+          open(p, 'w', encoding='utf-8').write(s)
+          PY
+        shell: bash
+
+      - name: Commit README
+        run: |
+          if git diff --quiet; then echo "README already up to date"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "docs: latest release ${{ needs.build.outputs.tag }} [skip ci]"
+          git push

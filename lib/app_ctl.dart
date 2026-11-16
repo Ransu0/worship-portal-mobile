@@ -14,7 +14,7 @@ import 'notify.dart';
 import 'repo.dart';
 import 'shuffle.dart';
 
-enum Screen { home, schedule, points, me, team, cant, songs, editsongs, sunday, swap, markdone, editmember, importNames }
+enum Screen { home, schedule, points, me, team, teamSetup, addSlot, cant, songs, editsongs, sunday, swap, markdone, editmember, importNames }
 
 enum NavTab { home, schedule, points, me, team }
 
@@ -43,6 +43,7 @@ class AppCtl extends ChangeNotifier {
   List<AppUser> users = [];
   List<Schedule> schedules = [];
   List<PointLog> logs = [];
+  Map<Cap, int> teamCounts = Map.of(defaultTeamCounts);
   AppUser? me;
   bool loaded = false;
   bool offline = false;
@@ -127,6 +128,10 @@ class AppCtl extends ChangeNotifier {
       schedules = r[1] as List<Schedule>;
       logs = r[2] as List<PointLog>;
       offline = false;
+      try {
+        final tc = await repo.fetchTeamCounts();
+        if (tc != null) teamCounts = {...defaultTeamCounts, ...tc};
+      } catch (_) {}
       unawaited(repo.cacheAll(users, schedules, logs));
     } catch (e) {
       debugPrint('Load failed: $e');
@@ -639,7 +644,7 @@ class AppCtl extends ChangeNotifier {
     final r = parseMonthKey(k);
     closeSheet();
     try {
-      final generated = generateMonthSchedule(r.y, r.m, users, schedules);
+      final generated = generateMonthSchedule(r.y, r.m, users, schedules, teamCounts);
       final created = generated.where((g) => !schedules.any((s) => s.id == g.id)).toList();
       for (final s in created) {
         _putSchedule(s);
@@ -694,6 +699,42 @@ class AppCtl extends ChangeNotifier {
     } catch (_) {
       _saveFailed();
     }
+  }
+
+  // ---------------- team size + extra spots ----------------
+  Future<void> saveTeamCounts(Map<Cap, int> counts) async {
+    teamCounts = {...counts, Cap.songleader: 1};
+    back();
+    toast('Saved. Used for the next auto-shuffle');
+    try {
+      await repo.saveTeamCounts(teamCounts);
+    } catch (_) {
+      _saveFailed();
+    }
+  }
+
+  /// Adds one more person to a Sunday (e.g. a second guitar).
+  Future<void> addToSunday(Schedule s, String userId, Cap role) async {
+    final u = firstOr(users, (x) => x.id == userId);
+    if (u == null) return;
+    back();
+    await _mutSchedule(s.id, (x) {
+      if (x.assignments.any((a) => a.userId == userId)) return;
+      x.assignments.add(Assignment(userId: u.id, userName: u.fullName, role: role, instrument: instrumentFor(role), status: 'assigned'));
+    });
+    toast('${u.fullName} added as ${roleLabel[role]}');
+    _syncReminders();
+  }
+
+  /// Removes a spot from a Sunday entirely (not an absence).
+  Future<void> removeFromSunday(Schedule s, Assignment a) async {
+    if (a.role == Cap.songleader) return;
+    back();
+    await _mutSchedule(s.id, (x) {
+      x.assignments.removeWhere((y) => y.userId == a.userId && y.role == a.role);
+    });
+    toast('${roleLabel[a.role]} spot removed');
+    _syncReminders();
   }
 
   // ---------------- reminders ----------------

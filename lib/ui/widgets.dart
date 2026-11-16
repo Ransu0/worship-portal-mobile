@@ -1237,16 +1237,28 @@ class TeamCards extends StatelessWidget {
           out.add(_RoleCard(a: a, lead: true, mine: meId != null && a.userId == meId, signedIn: signedIn, onPick: onPick));
         }
       } else {
+        // "Guitar 1", "Guitar 2" when a role has more than one spot
+        final totals = <Cap, int>{};
+        for (final a in g.$2) {
+          totals[a.role] = (totals[a.role] ?? 0) + 1;
+        }
+        final seen = <Cap, int>{};
+        final labels = <String>[];
+        for (final a in g.$2) {
+          seen[a.role] = (seen[a.role] ?? 0) + 1;
+          final many = (totals[a.role] ?? 0) > 1 && a.role != Cap.backup && a.role != Cap.tambourines;
+          labels.add(many ? '${roleLabel[a.role]} ${seen[a.role]}' : roleLabel[a.role]!);
+        }
         // two per row
         for (var i = 0; i < g.$2.length; i += 2) {
           if (i > 0) out.add(const SizedBox(height: 8));
           out.add(IntrinsicHeight(
             child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Expanded(child: _RoleCard(a: g.$2[i], lead: false, mine: meId != null && g.$2[i].userId == meId, signedIn: signedIn, onPick: onPick)),
+              Expanded(child: _RoleCard(a: g.$2[i], label: labels[i], lead: false, mine: meId != null && g.$2[i].userId == meId, signedIn: signedIn, onPick: onPick)),
               const SizedBox(width: 8),
               Expanded(
                 child: i + 1 < g.$2.length
-                    ? _RoleCard(a: g.$2[i + 1], lead: false, mine: meId != null && g.$2[i + 1].userId == meId, signedIn: signedIn, onPick: onPick)
+                    ? _RoleCard(a: g.$2[i + 1], label: labels[i + 1], lead: false, mine: meId != null && g.$2[i + 1].userId == meId, signedIn: signedIn, onPick: onPick)
                     : const SizedBox(),
               ),
             ]),
@@ -1260,9 +1272,10 @@ class TeamCards extends StatelessWidget {
 
 class _RoleCard extends StatelessWidget {
   final Assignment a;
+  final String? label;
   final bool lead, mine, signedIn;
   final void Function(Assignment)? onPick;
-  const _RoleCard({required this.a, required this.lead, required this.mine, required this.signedIn, this.onPick});
+  const _RoleCard({required this.a, this.label, required this.lead, required this.mine, required this.signedIn, this.onPick});
 
   @override
   Widget build(BuildContext context) {
@@ -1313,7 +1326,7 @@ class _RoleCard extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
                 Row(children: [
-                  Flexible(child: Text(roleLabel[a.role]!, style: tx(13, w700, C.soft, 1.3), overflow: TextOverflow.ellipsis)),
+                  Flexible(child: Text(label ?? roleLabel[a.role]!, style: tx(13, w700, C.soft, 1.3), overflow: TextOverflow.ellipsis)),
                   if (mine) ...[
                     const SizedBox(width: 6),
                     Container(

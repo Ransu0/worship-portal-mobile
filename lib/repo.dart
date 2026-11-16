@@ -12,6 +12,7 @@ import 'models.dart';
 const tUsers = 'worship_users';
 const tSchedules = 'worship_schedules';
 const tLogs = 'worship_point_logs';
+const tSettings = 'worship_settings';
 
 class Repo {
   SupabaseClient get db => Supabase.instance.client;
@@ -43,6 +44,25 @@ class Repo {
     return r == null ? null : AppUser.fromRow(r);
   }
 
+  /// Team size per role, set by the admin. Returns null if not set (or the table is missing).
+  Future<Map<Cap, int>?> fetchTeamCounts() async {
+    final r = await db.from(tSettings).select().eq('key', 'team_counts').maybeSingle();
+    final v = r?['value'];
+    if (v is! Map) return null;
+    final out = <Cap, int>{};
+    v.forEach((k, n) {
+      final c = capFrom(k as String?);
+      if (c != null && n is num) out[c] = n.toInt();
+    });
+    return out;
+  }
+
+  Future<void> saveTeamCounts(Map<Cap, int> counts) => db.from(tSettings).upsert({
+        'key': 'team_counts',
+        'value': {for (final e in counts.entries) e.key.name: e.value},
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+
   // ---------- write ----------
   Future<void> saveUser(AppUser u) => db.from(tUsers).upsert(u.toRow());
   Future<void> deleteUser(String id) => db.from(tUsers).delete().eq('id', id);
@@ -70,7 +90,7 @@ class Repo {
   void listen(void Function(String table) onChange) {
     _channel?.unsubscribe();
     var ch = db.channel('worship-live');
-    for (final t in [tUsers, tSchedules, tLogs]) {
+    for (final t in [tUsers, tSchedules, tLogs, tSettings]) {
       ch = ch.onPostgresChanges(
         event: PostgresChangeEvent.all,
         schema: 'public',

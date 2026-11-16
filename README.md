@@ -1,76 +1,87 @@
 # Worship Team (Flutter app)
 
 The COG Worship Team app for phones: Sunday team, songs, schedule, points, and weekly reminders.
-It uses the same Supabase tables as the web portal (`worship_users`, `worship_schedules`, `worship_point_logs`), so the app and the website can be used together.
 
-## Run on your phone
+## Download
 
-```bash
-flutter pub get
-dart run flutter_launcher_icons
-flutter run
-```
+<!-- latest-release:start -->
+**Latest release: v1.0.0** (coming soon)
 
-Plug in the phone with USB debugging on. `flutter run` installs the app and opens it.
+- Download the app: https://github.com/Ransu0/worship-portal-mobile/releases/latest/download/worship-team.apk
+- All releases: https://github.com/Ransu0/worship-portal-mobile/releases
+<!-- latest-release:end -->
 
-## Build an APK to share
+This section updates itself every time a new version is released. The download link above always gives the newest version.
 
-```bash
-flutter build apk --release
-```
+## Versions
 
-The file is at `build/app/outputs/flutter-apk/app-release.apk`. Send it to members. They'll need to allow installing apps from unknown sources.
+The version number is in `pubspec.yaml`, e.g. `version: 1.0.0+1`. Only the part before `+` matters; GitHub adds the build number.
+
+| Change | Example | When |
+|---|---|---|
+| Patch | 1.0.0 → 1.0.1 | Bug fixes |
+| Minor | 1.0.1 → 1.1.0 | New features |
+| Major | 1.1.0 → 2.0.0 | Big changes |
+
+**To release a new version:**
+
+1. Change `version:` in `pubspec.yaml`, e.g. `version: 1.0.1+1`.
+2. Add what changed to `CHANGELOG.md`.
+3. Commit, tag and push:
+   ```bash
+   git add .
+   git commit -m "Release v1.0.1"
+   git tag v1.0.1
+   git push
+   git push origin v1.0.1
+   ```
+
+GitHub then builds a signed APK, publishes it on the Releases page and updates the **Download** section above.
+The tag must match `pubspec.yaml`, or the build stops with a message telling you so.
+
+The app shows its version at the bottom of the **Me** page and the **Team** page, e.g. `Worship Team v1.0.0 · build 14`.
 
 ## Automatic builds (GitHub Actions)
 
-`.github/workflows/build-apk.yml` runs on GitHub every time you push:
+`.github/workflows/build-apk.yml`:
 
-- **Push to `main` or open a pull request** → checks the code, runs the tests, builds the APK. Download it from the run page under **Artifacts** (kept 30 days).
-- **Push a tag like `v1.0.0`** → also publishes the APK on the repo's **Releases** page, which is the easiest link to send members:
-  ```bash
-  git tag v1.0.0
-  git push origin v1.0.0
-  ```
-- **Actions tab → Build APK → Run workflow** → build on demand.
+- **Push to `main` or a pull request**: checks the code, runs the tests and builds a test APK. Download it from the run page under **Artifacts**. It's kept 30 days.
+- **Push a tag `vX.Y.Z`**: builds the release, publishes it and updates this README.
+- **Actions → Build APK → Run workflow**: builds on demand.
 
-### Signing key (do this before sharing APKs)
+### Signing
 
-Without it, every GitHub build is signed with a different throwaway key, so members can't install a new version over the old one (they'd have to uninstall first).
+Every APK is signed with the same key, so new versions install over old ones. Releases refuse to build without the key.
+The key is in `D:\Downloads\worship team portal\signing-key` (**not** in this repo). `KEEP-THIS-SAFE.txt` in that folder lists the four GitHub secrets:
+`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_PASSWORD`, `KEY_ALIAS` (repo **Settings → Secrets and variables → Actions**).
+Back that folder up. Without the key you can't publish updates that install over the current app.
 
-1. Make the key once, and keep `upload-keystore.jks` somewhere safe **outside** the project folder:
-   ```bash
-   "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
-   ```
-2. Turn it into text:
-   ```bash
-   powershell -command "[Convert]::ToBase64String([IO.File]::ReadAllBytes('upload-keystore.jks'))" > keystore.b64
-   ```
-3. On GitHub: repo **Settings → Secrets and variables → Actions → New repository secret**, add four:
-   - `KEYSTORE_BASE64`: everything inside `keystore.b64`
-   - `KEYSTORE_PASSWORD`: the keystore password you typed
-   - `KEY_PASSWORD`: the key password (same as above if you pressed Enter)
-   - `KEY_ALIAS`: `upload`
-4. Delete `keystore.b64`. The next build is signed with your key, and every build after it can update the previous one.
+## Run on your phone (development)
+
+```bash
+flutter pub get
+flutter run
+```
 
 ## Accounts
 
-The database starts with one account: `admin` / `cogvet`. Add members from the Team tab. New members also sign in with `cogvet`.
+New members sign in with the default password `cogvet`. The admin adds members from the Team tab.
 
 ## Reminders
 
-Each member turns them on from Home or the Me tab. The phone then schedules a reminder for every Sunday that member is on the team: sent the Sunday before at about 3:00 PM, with **Yes** and **Can't serve** buttons. Replies close Wednesday at 3:00 PM.
+Members turn them on from Home or the Me tab. The phone reminds them the Sunday before each Sunday they serve, at about 3:00 PM, with **Yes** and **Can't serve** buttons. Replies close Wednesday at 3:00 PM.
 On Realme, Oppo or Xiaomi phones: Settings → Battery → Worship Team → allow background activity, or reminders can be late.
 
 ## Where things are
 
-- `lib/config.dart`: Supabase URL and key
+- `lib/config.dart`: Supabase URL and key, app version
 - `lib/app_ctl.dart`: app state and every action (confirm, swap, points, shuffle…)
-- `lib/shuffle.dart`: the monthly rotation rules
+- `lib/shuffle.dart`: the monthly rotation rules and team size per role
 - `lib/notify.dart`: weekly reminders
 - `lib/screens/`: the screens
-- `lib/ui/`: colours, icons and shared widgets (copied from the web redesign)
+- `lib/ui/`: colours, icons, animations and shared widgets
 
 ## Before real use
 
 - Passwords are plain text and the tables are open to anyone with the key. Move logins to Supabase Auth with row-level security.
-- Set up the signing key (above) before sharing APKs or using the Play Store.
+- This repo is private, so only people with access to it can use the download links. To share with the whole team, make the repo public or send the APK file directly.

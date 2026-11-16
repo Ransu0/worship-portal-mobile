@@ -45,18 +45,46 @@ class _Pool {
 
   /// Next person from the rotation who isn't already on this Sunday, or null.
   AppUser? take(Set<String> used) {
-    if (q.where((u) => !used.contains(u.id)).isEmpty) return null;
-    if (i >= q.length) {
-      q = _shuffled(all);
-      i = 0;
+    if (all.every((u) => used.contains(u.id))) return null;
+    for (var tries = 0; tries <= all.length * 2; tries++) {
+      if (i >= q.length) {
+        q = _shuffled(all);
+        i = 0;
+      }
+      final u = q[i++];
+      if (!used.contains(u.id)) return u;
     }
-    final u = q[i++];
-    return used.contains(u.id) ? null : u;
+    return null;
   }
 }
 
+/// How many people each role gets per Sunday. -1 means "everyone with that ministry".
+const defaultTeamCounts = <Cap, int>{
+  Cap.songleader: 1,
+  Cap.backup: 2,
+  Cap.keys: 1,
+  Cap.guitar: 1,
+  Cap.bass: 1,
+  Cap.drums: 1,
+  Cap.media: 1,
+  Cap.tambourines: -1,
+};
+
+const _instrument = <Cap, String>{
+  Cap.backup: 'Backing Vocals',
+  Cap.keys: 'Keys / Piano',
+  Cap.guitar: 'Acoustic / Electric Guitar',
+  Cap.bass: 'Bass Guitar',
+  Cap.drums: 'Drums',
+  Cap.media: 'Media / Visuals',
+  Cap.tambourines: 'Tambourine',
+};
+
+String instrumentFor(Cap c) => c == Cap.songleader ? 'Lead Vocals' : (_instrument[c] ?? c.name);
+
 /// Throws a [StateError] with a readable message when there is no song leader.
-List<Schedule> generateMonthSchedule(int y, int m0, List<AppUser> users, List<Schedule> existing) {
+List<Schedule> generateMonthSchedule(int y, int m0, List<AppUser> users, List<Schedule> existing,
+    [Map<Cap, int> counts = defaultTeamCounts]) {
   final sundays = sundaysInMonth(y, m0);
   final monthKey = '$y-${two(m0 + 1)}';
   final active = users.where((u) => u.active).toList();
@@ -74,13 +102,9 @@ List<Schedule> generateMonthSchedule(int y, int m0, List<AppUser> users, List<Sc
   var slQueue = [..._shuffled(fresh), ..._shuffled(fallback)];
   var slIdx = 0;
 
-  final backup = _Pool(withCap(Cap.backup));
-  final keys = _Pool(withCap(Cap.keys));
-  final guitar = _Pool(withCap(Cap.guitar));
-  final bass = _Pool(withCap(Cap.bass));
-  final drums = _Pool(withCap(Cap.drums));
-  final media = _Pool(withCap(Cap.media));
-  final tambs = withCap(Cap.tambourines);
+  // Fill order matches the web app: backup, keys, guitar, bass, drums, media, then tambourine.
+  const order = [Cap.backup, Cap.keys, Cap.guitar, Cap.bass, Cap.drums, Cap.media, Cap.tambourines];
+  final pools = {for (final c in order) c: _Pool(withCap(c))};
 
   final out = <Schedule>[];
   for (final date in sundays) {
@@ -99,24 +123,25 @@ List<Schedule> generateMonthSchedule(int y, int m0, List<AppUser> users, List<Sc
     ];
     final used = <String>{sl.id};
 
-    void add(_Pool p, Cap role, String instrument) {
-      final u = p.take(used);
-      if (u == null) return;
-      used.add(u.id);
-      assignments.add(Assignment(userId: u.id, userName: u.fullName, role: role, instrument: instrument, status: 'assigned'));
-    }
-
-    final backupsFree = backup.all.where((u) => !used.contains(u.id)).length;
-    for (var k = 0; k < min(2, backupsFree); k++) {
-      add(backup, Cap.backup, 'Backing Vocals');
-    }
-    add(keys, Cap.keys, 'Keys / Piano');
-    add(guitar, Cap.guitar, 'Acoustic / Electric Guitar');
-    add(bass, Cap.bass, 'Bass Guitar');
-    add(drums, Cap.drums, 'Drums');
-    add(media, Cap.media, 'Media / Visuals');
-    for (final t in tambs) {
-      assignments.add(Assignment(userId: t.id, userName: t.fullName, role: Cap.tambourines, instrument: 'Tambourine', status: 'assigned'));
+    for (final role in order) {
+      final want = counts[role] ?? defaultTeamCounts[role] ?? 0;
+      final pool = pools[role]!;
+      if (want < 0) {
+        // everyone with this ministry (default for tambourine)
+        for (final u in pool.all) {
+          if (used.contains(u.id) && role != Cap.tambourines) continue;
+          assignments.add(Assignment(userId: u.id, userName: u.fullName, role: role, instrument: instrumentFor(role), status: 'assigned'));
+          used.add(u.id);
+        }
+        continue;
+      }
+      final free = pool.all.where((u) => !used.contains(u.id)).length;
+      for (var k = 0; k < min(want, free); k++) {
+        final u = pool.take(used);
+        if (u == null) continue;
+        used.add(u.id);
+        assignments.add(Assignment(userId: u.id, userName: u.fullName, role: role, instrument: instrumentFor(role), status: 'assigned'));
+      }
     }
 
     out.add(Schedule(

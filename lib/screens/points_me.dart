@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_ctl.dart';
+import '../config.dart';
 import '../helpers.dart';
 import '../models.dart';
 import '../ui/icons.dart';
@@ -257,6 +258,7 @@ class MeScreen extends StatelessWidget {
           ]),
         ),
         SignOutMenu(app: app),
+        const VersionLine(),
       ],
     );
   }
@@ -290,5 +292,15 @@ class SignOutMenu extends StatelessWidget {
             Expanded(child: Text('Sign out${showName && app.me != null ? ' (${app.me!.fullName})' : ''}', style: tx(16, w700, C.red))),
           ]),
         ),
+      );
+}
+
+class VersionLine extends StatelessWidget {
+  const VersionLine({super.key});
+  @override
+  Widget build(BuildContext context) => Text(
+        'Worship Team v$appVersion${appBuild == 'dev' ? ' (dev)' : ' · build $appBuild'}',
+        textAlign: TextAlign.center,
+        style: tx(13, w600, C.soft),
       );
 }

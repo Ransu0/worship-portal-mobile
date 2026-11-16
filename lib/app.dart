@@ -45,8 +45,8 @@ class Shell extends StatelessWidget {
     final role = app.role;
     var v = app.view;
     if ((v == Screen.cant || v == Screen.me) && me == null) v = Screen.home;
-    if ([Screen.songs, Screen.editsongs, Screen.sunday, Screen.swap, Screen.markdone].contains(v) && app.sel == null) v = Screen.home;
-    if ([Screen.team, Screen.editmember, Screen.importNames].contains(v) && role != Role.admin) v = Screen.home;
+    if ([Screen.songs, Screen.editsongs, Screen.sunday, Screen.swap, Screen.markdone, Screen.addSlot].contains(v) && app.sel == null) v = Screen.home;
+    if ([Screen.team, Screen.editmember, Screen.importNames, Screen.teamSetup, Screen.addSlot].contains(v) && role != Role.admin) v = Screen.home;
     if (v == Screen.swap && app.swapTarget == null) v = Screen.home;
     if (v == Screen.cant && findMine(app.upcoming, me?.id) == null) v = Screen.home;
     return switch (v) {
@@ -63,6 +63,8 @@ class Shell extends StatelessWidget {
       Screen.team => TeamScreen(app: app),
       Screen.editmember => EditMemberScreen(key: ValueKey('member-${app.editUserId ?? 'new'}'), app: app),
       Screen.importNames => ImportScreen(app: app),
+      Screen.teamSetup => TeamSetupScreen(app: app),
+      Screen.addSlot => AddSlotScreen(key: ValueKey('add-${app.selId}'), app: app),
     };
   }
 
