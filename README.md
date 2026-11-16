@@ -4,15 +4,9 @@ The COG Worship Team app for phones: Sunday team, songs, schedule, points, and w
 
 ## Download
 
-<!-- latest-release:start -->
-**Latest release: v1.0.0** (Nov 16, 2026)
+**Get the newest version:** https://github.com/Ransu0/worship-portal-mobile/releases/latest/download/worship-team.apk
 
-- Download the app: https://github.com/Ransu0/worship-portal-mobile/releases/latest/download/worship-team.apk
-- Release notes: https://github.com/Ransu0/worship-portal-mobile/releases/tag/v1.0.0
-- All releases: https://github.com/Ransu0/worship-portal-mobile/releases
-<!-- latest-release:end -->
-
-This section updates itself every time a new version is released. The download link above always gives the newest version.
+This link always gives the latest release. All versions and what changed in each: https://github.com/Ransu0/worship-portal-mobile/releases
 
 ## iPhone (web app)
 
@@ -40,41 +34,38 @@ Replying, or being covered by someone, stops the rest. Nothing is sent after Wed
 - **iPhone / browser:** sent by the Supabase function `supabase/functions/daily-reminders`. A job inside Supabase calls it every hour, and it only sends what's due, never twice. Tapping the notification opens the "Can you serve?" card.
 - `.github/workflows/keepalive.yml` calls the function twice a day so the free Supabase project never pauses.
 
-## Versions
+## Versions (automatic)
 
-The version number is in `pubspec.yaml`, e.g. `version: 1.0.0+1`. Only the part before `+` matters; GitHub adds the build number.
+You only commit and push. Every push to `main` builds a signed APK and releases the next version on its own:
 
-| Change | Example | When |
+`v1.0.0 → v1.1.0 → v1.2.0 → …`
+
+Add one of these anywhere in a commit message to change that:
+
+| In the commit message | What happens | Example |
 |---|---|---|
-| Patch | 1.0.0 → 1.0.1 | Bug fixes |
-| Minor | 1.0.1 → 1.1.0 | New features |
-| Major | 1.1.0 → 2.0.0 | Big changes |
+| *(nothing)* | Next minor version | v1.2.0 → v1.3.0 |
+| `[patch]` | Small fix | v1.3.0 → v1.3.1 |
+| `[major]` | Big change | v1.3.1 → v2.0.0 |
+| `[skip release]` | Build only, no new version | — |
 
-**To release a new version:**
+```bash
+git add .
+git commit -m "Grey out done Sundays"
+git push
+```
 
-1. Change `version:` in `pubspec.yaml`, e.g. `version: 1.0.1+1`.
-2. Add what changed to `CHANGELOG.md`.
-3. Commit, tag and push:
-   ```bash
-   git add .
-   git commit -m "Release v1.0.1"
-   git tag v1.0.1
-   git push
-   git push origin v1.0.1
-   ```
-
-GitHub then builds a signed APK, publishes it on the Releases page and updates the **Download** section above.
-The tag must match `pubspec.yaml`, or the build stops with a message telling you so.
-
-The app shows its version at the bottom of the **Me** page and the **Team** page, e.g. `Worship Team v1.0.0 · build 14`.
+The release notes are your commit messages since the last version. The app shows its version at the bottom of the **Me** and **Team** pages, e.g. `Worship Team v1.3.0 · build 21`.
+Nothing is committed back to `main` by GitHub, so `git push` never gets rejected.
+(`version:` in `pubspec.yaml` is only used for local `flutter run`.)
 
 ## Automatic builds (GitHub Actions)
 
 `.github/workflows/build-apk.yml`:
 
-- **Push to `main` or a pull request**: checks the code, runs the tests and builds a test APK. Download it from the run page under **Artifacts**. It's kept 30 days.
-- **Push a tag `vX.Y.Z`**: builds the release, publishes it and updates this README.
-- **Actions → Build APK → Run workflow**: builds on demand.
+- **Push to `main`**: checks the code, runs the tests, builds the signed APK and publishes the next version on the **Releases** page. The web app is built and deployed too.
+- **Pull request**: checks, tests and builds, without releasing.
+- **Actions → Build APK → Run workflow**: runs it on demand.
 
 ### Signing
 

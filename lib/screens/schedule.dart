@@ -120,11 +120,15 @@ class _SunRow extends StatelessWidget {
     }
     final dateBg = isNow ? C.navy : (done ? C.chip : C.lav);
     final dateFg = isNow ? C.yellow : (done ? C.soft : C.navy);
-    return Tap(
+    // Done Sundays are greyed out so the list focuses on what's coming up.
+    return AnimatedOpacity(
+      opacity: done ? 0.5 : 1,
+      duration: const Duration(milliseconds: 250),
+      child: Tap(
       onTap: () => app.go(Screen.sunday, sel: s.id),
-      color: C.white,
+      color: done ? C.bg : C.white,
       radius: BorderRadius.circular(20),
-      border: Border.all(color: isNow ? C.navy : C.line, width: 2),
+      border: Border.all(color: isNow ? C.navy : (done ? C.line2 : C.line), width: 2),
       padding: const EdgeInsets.all(16),
       child: Row(children: [
         Container(
@@ -139,13 +143,14 @@ class _SunRow extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${s.songleaderName} leads', style: tx(17, w700)),
+            Text('${s.songleaderName} leads', style: tx(17, w700, done ? C.soft : C.ink)),
             const SizedBox(height: 4),
             Text(note, style: tx(15, w600, color)),
           ]),
         ),
-        const Ic('chev', s: 20, c: C.soft, w: 2.5),
+        Ic(done ? 'check' : 'chev', s: 20, c: done ? C.green : C.soft, w: 2.5),
       ]),
+    ),
     );
   }
 }

@@ -1,5 +1,7 @@
 # Changelog
 
+From v1.1.0 on, the release notes are written automatically from commit messages. See the Releases page on GitHub.
+
 ## v1.0.0
 
 First release of the Worship Team phone app.
