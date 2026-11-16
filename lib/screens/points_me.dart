@@ -299,11 +299,15 @@ class SignOutMenu extends StatelessWidget {
 class VersionLine extends StatelessWidget {
   const VersionLine({super.key});
   @override
-  Widget build(BuildContext context) => Text(
-        'Worship Team v$appVersion${appBuild == 'dev' ? ' (dev)' : ' · build $appBuild'}',
-        textAlign: TextAlign.center,
-        style: tx(13, w600, C.soft),
-      );
+  Widget build(BuildContext context) => Column(children: [
+        Text(
+          'Worship Team v$appVersion${appBuild == 'dev' ? ' (dev)' : ' · build $appBuild'}',
+          textAlign: TextAlign.center,
+          style: tx(13, w600, C.soft),
+        ),
+        const SizedBox(height: 4),
+        Text('dev - Ransu0 · JayScriptx', textAlign: TextAlign.center, style: tx(12, FontWeight.w500, C.soft)),
+      ]);
 }
 
 /// Light / Dark / System picker (Me page and Team page).
