@@ -5,9 +5,10 @@ The COG Worship Team app for phones: Sunday team, songs, schedule, points, and w
 ## Download
 
 <!-- latest-release:start -->
-**Latest release: v1.0.0** (coming soon)
+**Latest release: v1.0.0** (Nov 16, 2026)
 
 - Download the app: https://github.com/Ransu0/worship-portal-mobile/releases/latest/download/worship-team.apk
+- Release notes: https://github.com/Ransu0/worship-portal-mobile/releases/tag/v1.0.0
 - All releases: https://github.com/Ransu0/worship-portal-mobile/releases
 <!-- latest-release:end -->
 
