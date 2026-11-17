@@ -12,6 +12,7 @@ import 'screens/signin_cant.dart';
 import 'screens/songs.dart';
 import 'screens/team.dart';
 import 'ui/icons.dart';
+import 'ui/splash.dart';
 import 'ui/theme.dart';
 import 'ui/widgets.dart';
 
@@ -28,11 +29,15 @@ class WorshipApp extends StatelessWidget {
           theme: appTheme(),
           home: AnnotatedRegion<SystemUiOverlayStyle>(
             value: overlayStyle(),
-            // Keyed on the mode so every widget (const ones too) repaints with
-            // the new colours; the switcher cross-fades light <-> dark.
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 280),
-              child: KeyedSubtree(key: ValueKey('${C.dark}${C.gold}'), child: Shell(app: app)),
+            // The launch splash sits outside the theme cross-fade so it never restarts.
+            child: SplashGate(
+              app: app,
+              // Keyed on the mode so every widget (const ones too) repaints with
+              // the new colours; the switcher cross-fades light <-> dark.
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 280),
+                child: KeyedSubtree(key: ValueKey('${C.dark}${C.gold}'), child: Shell(app: app)),
+              ),
             ),
           ),
         ),

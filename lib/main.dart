@@ -6,6 +6,7 @@ import 'app.dart';
 import 'app_ctl.dart';
 import 'config.dart';
 import 'notify.dart';
+import 'ui/splash.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +15,7 @@ Future<void> main() async {
   await Notify.init();
   final app = AppCtl();
   await app.loadTheme();
+  await SplashArt.load(); // logo ready for the first frame (matches the Android launch screen)
   runApp(WorshipApp(app: app));
   await app.start();
 }

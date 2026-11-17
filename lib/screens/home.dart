@@ -4,6 +4,7 @@ import '../app_ctl.dart';
 import '../helpers.dart';
 import '../models.dart';
 import '../ui/icons.dart';
+import '../ui/skeleton.dart';
 import '../ui/theme.dart';
 import '../ui/widgets.dart';
 
@@ -113,13 +114,15 @@ class HomeScreen extends StatelessWidget {
 
     if (s == null) {
       return Frame(
+        // A new key when the data arrives, so the real content fades up in order.
+        key: ValueKey(app.loaded ? 'home-empty' : 'home-loading'),
         header: TopHeader(admin: role == Role.admin, right: right),
         bottom: nav,
         children: [
           H1(title),
           if (app.welcomeOn) Welcome(app: app),
           if (!app.loaded)
-            Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(color: C.navy)))
+            const HomeSkeleton()
           else
             EmptyCard(
               title: 'No service scheduled',
